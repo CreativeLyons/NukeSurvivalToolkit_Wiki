@@ -9,13 +9,15 @@ Live Online Wiki: <https://creativelyons.github.io/NukeSurvivalToolkit_Wiki/>
 This repository contains the source and deployment setup for the NST wiki.
 
 - Docs source: `documentation/docs/`
-- MkDocs config: `documentation/mkdocs.yml`
+- MkDocs online config (GitHub Pages): `documentation/mkdocs.yml`
+- MkDocs offline config (ZIP/local file mode): `documentation/mkdocs.offline.yml`
 - Local build output: `documentation/site/` (ignored)
 - CI deploy workflow: `.github/workflows/mkdocs.yml`
 
 ## Deployment
 
 Deployment is handled by GitHub Actions via `.github/workflows/mkdocs.yml` when changes are pushed to `main` under `documentation/**`.
+CI builds with `documentation/mkdocs.yml` (online config).
 
 ## Options for Offline Documentation:
 
@@ -31,14 +33,14 @@ Build:
 
 ```bash
 cd documentation
-mkdocs build
+mkdocs build -f mkdocs.offline.yml
 ```
 
 Serve locally:
 
 ```bash
 cd documentation
-mkdocs serve -a 127.0.0.1:8010
+mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 ```
 
 Open:
@@ -49,7 +51,7 @@ Open:
 
 A prebuilt static wiki ZIP will be provided in GitHub Releases so users can run the documentation offline without building from source.
 
-When available, download the latest release asset ZIP from the Releases page, unzip it anywhere on your machine, and open `index.html` (or serve the folder locally) to browse the full wiki offline.
+When available, download the latest release asset ZIP from the Releases page, unzip it anywhere on your machine, and open `site/index.html` (or serve the `site/` folder locally) to browse the full wiki offline.
 
 Releases:
 

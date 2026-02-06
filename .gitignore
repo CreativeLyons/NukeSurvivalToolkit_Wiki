@@ -14,6 +14,10 @@ env/
 # MkDocs local build output
 site/
 documentation/site/
+documentation/.cache/
+
+# Release artifacts
+*.zip
 
 # PDF artifacts
 *.pdf

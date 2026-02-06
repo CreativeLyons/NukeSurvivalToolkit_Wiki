@@ -1,14 +1,18 @@
 site_name: Nuke Survival Toolkit Documentation
 site_url: ""
 
-# Online/GitHub Pages config (default in CI)
-# Keep .html output files for direct linking
+# Offline/local-file build config used for release ZIP assets.
+# Includes file:// compatibility plugins and disables navigation.instant.
+# Build with: mkdocs build -f mkdocs.offline.yml
+# Enable file extensions for offline viewing
 use_directory_urls: false
 
 # PDF export - mkdocs-to-pdf (WeasyPrint)
 # Run with: DYLD_LIBRARY_PATH="/opt/homebrew/lib" PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig" mkdocs build
 plugins:
   - search
+  - offline
+  - privacy
 
 nav:
     - Home: index.md
@@ -259,7 +263,7 @@ theme:
     features:
         # - navigation.tabs # Disabled to keep sidebar overview
         # - navigation.sections # Disabled: We are using expand for full overview
-        - navigation.instant # Enabled for online GitHub Pages UX
+        # - navigation.instant # Disabled for offline file:// compatibility
         - navigation.expand # Enabled: Expands navigation by default for better overview
         - navigation.top
         - navigation.tracking # Enabled: Highlights active page
@@ -281,9 +285,7 @@ theme:
           toggle:
             icon: material/brightness-7
             name: Switch to dark mode
-    font:
-        text: Lato
-        code: JetBrains Mono
+    font: false
 
 markdown_extensions:
     - toc:
@@ -297,7 +299,6 @@ markdown_extensions:
 extra_javascript:
     - js/video-swap.js
     - js/external-links.js
-    - js/force-sidebar-scroll.js
 
 extra_css:
     # - css/custom.css # Commented out to use native Material theme styling

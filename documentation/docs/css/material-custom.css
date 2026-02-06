@@ -1,6 +1,120 @@
 /* Custom styles for Material Theme */
-@import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
+@font-face {
+    font-family: "Lato";
+    font-style: normal;
+    font-weight: 300;
+    font-display: swap;
+    src: url("../assets/fonts/lato-300-normal-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Lato";
+    font-style: italic;
+    font-weight: 300;
+    font-display: swap;
+    src: url("../assets/fonts/lato-300-italic-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Lato";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../assets/fonts/lato-400-normal-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Lato";
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../assets/fonts/lato-400-italic-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Lato";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../assets/fonts/lato-700-normal-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Lato";
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../assets/fonts/lato-700-italic-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Titillium Web";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../assets/fonts/titillium-web-400-normal-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Titillium Web";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("../assets/fonts/titillium-web-600-normal-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Titillium Web";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../assets/fonts/titillium-web-700-normal-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Titillium Web";
+    font-style: normal;
+    font-weight: 900;
+    font-display: swap;
+    src: url("../assets/fonts/titillium-web-900-normal-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../assets/fonts/jetbrains-mono-400-normal-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../assets/fonts/jetbrains-mono-400-italic-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../assets/fonts/jetbrains-mono-700-normal-latin.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../assets/fonts/jetbrains-mono-700-italic-latin.woff2") format("woff2");
+}
+
+:root {
+    --md-text-font: "Lato";
+    --md-code-font: "JetBrains Mono";
+}
 
 /* ============================================
    FOUNDRY NUKE UI THEME (Hybrid)
@@ -55,7 +169,7 @@
 .md-typeset h4,
 .md-typeset h5,
 .md-typeset h6 {
-    font-family: "Titillium Web", sans-serif;
+    font-family: "Titillium Web", "Lato", "Segoe UI", sans-serif;
     font-weight: 700;
 }
 
@@ -103,7 +217,7 @@
 }
 
 .md-header__title {
-    font-family: "Titillium Web", sans-serif;
+    font-family: "Titillium Web", "Lato", "Segoe UI", sans-serif;
     font-weight: 700;
 }
 
@@ -151,7 +265,7 @@
     background-color: var(--nuke-header);
     border-bottom: 1px solid var(--nuke-border);
     font-weight: bold;
-    font-family: "Titillium Web", sans-serif; /* Match headers */
+    font-family: "Titillium Web", "Lato", "Segoe UI", sans-serif; /* Match headers */
 }
 
 /* Code blocks styled like Script Editor */
@@ -160,22 +274,6 @@
     border: 1px solid var(--nuke-border);
     color: #d4d4d4;
     font-family: "JetBrains Mono", "Consolas", "Monaco", monospace; /* Explicitly set JetBrains Mono */
-}
-
-/* ============================================
-   SEARCH BAR POSITIONING (Experimental)
-   ============================================ */
-/* This attempts to make the search bar feel more integrated into the sidebar/top area */
-@media screen and (min-width: 76.25em) {
-    .md-search {
-        background-color: var(--nuke-bg-input);
-        border: 1px solid var(--nuke-border);
-        border-radius: 4px;
-        margin: 8px;
-    }
-    .md-search__input {
-        background-color: transparent;
-    }
 }
 
 /* ============================================
