@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Normalized markdown list spacing across documentation pages to prevent collapsed paragraph/list rendering.
 - Updated `AdditiveKeyerPro` input section so each input bullet maps to the correct reference image, with those four input images displayed at 75% width.
 - Initialized repository git metadata for this wiki project.
+- Reworked `README.md` to prioritize the live wiki URL at the top, simplified section hierarchy, and clarified online/offline usage paths.
+- Made the README header banner image clickable to the live documentation site.
+- Updated `.gitignore` to allow versioning the official offline documentation PDF.
+
+### Added
+
+- Added README banner image asset at `documentation/docs/img/nst-wiki-large.jpeg`.
+- Added offline PDF reference asset at `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf`.
 
 ## [0.1.0] - 2026-02-06
 
@@ -20,4 +28,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial MkDocs-based wiki structure under `documentation/` with authored tool pages and media assets.
 - MkDocs configuration for local build/serve and GitHub Pages deployment workflow.
 - Root repository scaffolding (`README.md`, `.gitignore`, `.github/workflows/mkdocs.yml`).
-

@@ -17,6 +17,7 @@ documentation/site/
 
 # PDF artifacts
 *.pdf
+!documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf
 
 # Editor/IDE
 .vscode/

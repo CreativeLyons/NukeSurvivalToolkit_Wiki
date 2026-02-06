@@ -1,45 +1,66 @@
 # NukeSurvivalToolkit Wiki
 
-MkDocs-based documentation site for Nuke Survival Toolkit.
+Live Online Wiki: <https://creativelyons.github.io/NukeSurvivalToolkit_Wiki/>
 
-## Overview
+[![Nuke Survival Toolkit Documentation Banner](documentation/docs/img/nst-wiki-large.jpeg)](https://creativelyons.github.io/NukeSurvivalToolkit_Wiki/)
 
-This repository contains the source content and configuration used to build and deploy the NST wiki.
+## Repository Layout
+
+This repository contains the source and deployment setup for the NST wiki.
 
 - Docs source: `documentation/docs/`
 - MkDocs config: `documentation/mkdocs.yml`
-- Built local site output: `documentation/site/`
+- Local build output: `documentation/site/` (ignored)
 - CI deploy workflow: `.github/workflows/mkdocs.yml`
 
-## Local Development
+## Deployment
 
-### Prerequisites
+Deployment is handled by GitHub Actions via `.github/workflows/mkdocs.yml` when changes are pushed to `main` under `documentation/**`.
+
+## Options for Offline Documentation:
+
+## A. Build From Source (Offline Wiki)
+
+Requirements:
 
 - Python 3.x
 - `mkdocs`
 - `mkdocs-material`
 
-### Build
+Build:
 
 ```bash
 cd documentation
 mkdocs build
 ```
 
-### Serve Locally
+Serve locally:
 
 ```bash
 cd documentation
 mkdocs serve -a 127.0.0.1:8010
 ```
 
-Then open:
+Open:
 
-- <http://127.0.0.1:8010/>
+<http://127.0.0.1:8010/>
 
-## Deployment
+## B. Offline Wiki (Prebuilt ZIP Release Asset)
 
-Deployment is handled by GitHub Actions via `.github/workflows/mkdocs.yml` when changes are pushed to `main` or `master` under `documentation/**`.
+A prebuilt static wiki ZIP will be provided in GitHub Releases so users can run the documentation offline without building from source.
+
+When available, download the latest release asset ZIP from the Releases page, unzip it anywhere on your machine, and open `index.html` (or serve the folder locally) to browse the full wiki offline.
+
+Releases:
+
+<https://github.com/CreativeLyons/NukeSurvivalToolkit_Wiki/releases>
+
+## C. Offline Wiki (PDF Reference)
+
+For a simple offline reference version of the documentation, use the PDF:
+
+- [NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf](documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf)
+
 
 ## Changelog
 
