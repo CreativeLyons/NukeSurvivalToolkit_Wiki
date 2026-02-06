@@ -1,0 +1,414 @@
+/* Nuke Survival Toolkit - Dark Theme (Nukepedia-inspired) */
+
+/* ============================================
+   ROOT VARIABLES
+   ============================================ */
+:root {
+    --bg-dark: #1a1a1a;
+    --bg-darker: #141414;
+    --bg-sidebar: #1e1e1e;
+    --bg-content: #242424;
+    --bg-code: #2d2d2d;
+    --bg-hover: #333333;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-muted: #707070;
+    --accent-blue: #4a9eff;
+    --accent-orange: #ff9f43;
+    --border-color: #3a3a3a;
+    --link-color: #4a9eff;
+    --link-hover: #6cb3ff;
+}
+
+/* ============================================
+   GLOBAL DARK THEME
+   ============================================ */
+body {
+    background-color: var(--bg-dark) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ============================================
+   NAVIGATION SIDEBAR
+   ============================================ */
+.wy-nav-side {
+    background: var(--bg-sidebar) !important;
+}
+
+.wy-side-scroll {
+    background: var(--bg-sidebar) !important;
+}
+
+.wy-side-nav-search {
+    background: var(--bg-darker) !important;
+}
+
+.wy-side-nav-search input[type="text"] {
+    background: var(--bg-content) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.wy-side-nav-search a {
+    color: var(--text-primary) !important;
+}
+
+.wy-menu-vertical {
+    background: transparent !important;
+}
+
+.wy-menu-vertical a {
+    color: var(--text-secondary) !important;
+}
+
+.wy-menu-vertical a:hover {
+    background: var(--bg-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+.wy-menu-vertical li.current > a {
+    background: var(--bg-hover) !important;
+    color: var(--accent-blue) !important;
+    border-left: 3px solid var(--accent-blue);
+}
+
+.wy-menu-vertical li.current {
+    background: transparent !important;
+}
+
+.wy-menu-vertical li.toctree-l1 > a {
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.wy-menu-vertical li span.toctree-expand {
+    color: var(--text-muted) !important;
+}
+
+.wy-menu-vertical li span.toctree-expand:before {
+    color: var(--text-muted) !important;
+}
+
+/* ============================================
+   MAIN CONTENT AREA
+   ============================================ */
+.wy-nav-content-wrap {
+    background: var(--bg-dark) !important;
+}
+
+.wy-nav-content {
+    background: var(--bg-content) !important;
+    max-width: 100% !important;
+}
+
+.rst-content {
+    color: var(--text-primary) !important;
+}
+
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+.rst-content h1,
+.rst-content h2,
+.rst-content h3,
+.rst-content h4,
+.rst-content h5,
+.rst-content h6 {
+    color: var(--text-primary) !important;
+}
+
+.rst-content p {
+    color: var(--text-primary) !important;
+    line-height: 1.7;
+}
+
+.rst-content a {
+    color: var(--link-color) !important;
+}
+
+.rst-content a:hover {
+    color: var(--link-hover) !important;
+}
+
+/* Author line accent */
+.rst-content strong {
+    color: var(--accent-orange) !important;
+}
+
+/* ============================================
+   CODE BLOCKS
+   ============================================ */
+.rst-content code,
+.rst-content tt {
+    background: var(--bg-code) !important;
+    color: var(--accent-orange) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.rst-content pre {
+    background: var(--bg-code) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.rst-content pre code {
+    color: var(--text-primary) !important;
+    border: none !important;
+}
+
+.highlight {
+    background: var(--bg-code) !important;
+}
+
+/* ============================================
+   TABLES
+   ============================================ */
+.rst-content table.docutils {
+    border-color: var(--border-color) !important;
+}
+
+.rst-content table.docutils td,
+.rst-content table.docutils th {
+    border-color: var(--border-color) !important;
+    background: var(--bg-content) !important;
+    color: var(--text-primary) !important;
+}
+
+.rst-content table.docutils th {
+    background: var(--bg-darker) !important;
+}
+
+/* ============================================
+   LISTS
+   ============================================ */
+.rst-content ul li,
+.rst-content ol li {
+    color: var(--text-primary) !important;
+}
+
+/* ============================================
+   HEADER / BREADCRUMBS
+   ============================================ */
+.wy-breadcrumbs {
+    background: transparent !important;
+}
+
+.wy-breadcrumbs li a {
+    color: var(--link-color) !important;
+}
+
+.wy-breadcrumbs-aside a {
+    color: var(--text-muted) !important;
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+footer {
+    color: var(--text-muted) !important;
+}
+
+footer a {
+    color: var(--link-color) !important;
+}
+
+.rst-footer-buttons {
+    border-top-color: var(--border-color) !important;
+}
+
+/* ============================================
+   VERSION SELECTOR
+   ============================================ */
+.rst-versions {
+    background: var(--bg-darker) !important;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+.rst-versions a {
+    color: var(--text-secondary) !important;
+}
+
+.rst-versions .rst-current-version {
+    background: var(--bg-sidebar) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ============================================
+   SCROLLBAR (Webkit)
+   ============================================ */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-darker);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* ============================================
+   VIDEO CONTAINER STYLES
+   ============================================ */
+.video-container {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin: 1em 0;
+    background: var(--bg-code);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.video-container iframe {
+    width: 100%;
+    height: 360px;
+    border: none;
+}
+
+.video-offline-fallback {
+    display: block;
+    padding: 1em;
+    background: var(--bg-code);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.video-offline-fallback a {
+    color: var(--link-color) !important;
+}
+
+/* ============================================
+   IMAGES
+   ============================================ */
+.rst-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+/* ============================================
+   SEARCH
+   ============================================ */
+.wy-body-for-nav .wy-nav-top {
+    background: var(--bg-darker) !important;
+}
+
+.wy-nav-top a {
+    color: var(--text-primary) !important;
+}
+
+/* Mobile menu button */
+.wy-nav-top i {
+    color: var(--text-primary) !important;
+}
+
+/* Search results */
+.search .context {
+    color: var(--text-secondary) !important;
+}
+
+/* ============================================
+   ADMONITIONS / NOTES
+   ============================================ */
+.rst-content .admonition {
+    background: var(--bg-code) !important;
+}
+
+.rst-content .admonition-title {
+    background: var(--bg-darker) !important;
+}
+
+.rst-content .note {
+    background: rgba(74, 158, 255, 0.1) !important;
+}
+
+.rst-content .warning {
+    background: rgba(255, 159, 67, 0.1) !important;
+}
+
+/* ============================================
+   BUTTONS (Previous/Next)
+   ============================================ */
+.rst-footer-buttons .btn {
+    background: var(--bg-hover) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.rst-footer-buttons .btn:hover {
+    background: var(--bg-code) !important;
+    color: var(--accent-blue) !important;
+    border-color: var(--accent-blue) !important;
+}
+
+.btn-neutral {
+    background: var(--bg-hover) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.btn-neutral:hover {
+    background: var(--bg-code) !important;
+    color: var(--accent-blue) !important;
+}
+
+.btn-neutral:visited {
+    color: var(--text-primary) !important;
+}
+
+/* Icon colors in buttons */
+.fa-arrow-circle-right,
+.fa-arrow-circle-left {
+    color: var(--accent-blue) !important;
+}
+
+/* ============================================
+   SEARCH INPUT
+   ============================================ */
+.wy-side-nav-search input[type="text"]::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* Search button */
+.wy-side-nav-search .wy-form {
+    background: transparent !important;
+}
+
+/* ============================================
+   MOBILE MENU
+   ============================================ */
+.wy-nav-top {
+    background: var(--bg-darker) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ============================================
+   ALL REMAINING BUTTONS
+   ============================================ */
+button,
+.btn,
+input[type="submit"],
+input[type="button"] {
+    background: var(--bg-hover) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+button:hover,
+.btn:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover {
+    background: var(--bg-code) !important;
+    color: var(--accent-blue) !important;
+    border-color: var(--accent-blue) !important;
+}

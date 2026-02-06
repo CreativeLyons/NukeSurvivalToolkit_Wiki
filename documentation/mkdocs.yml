@@ -1,0 +1,303 @@
+site_name: Nuke Survival Toolkit Documentation
+site_url: ""
+
+# Enable file extensions for offline viewing
+use_directory_urls: false
+
+# PDF export - mkdocs-to-pdf (WeasyPrint)
+# Run with: DYLD_LIBRARY_PATH="/opt/homebrew/lib" PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig" mkdocs build
+plugins:
+  - search
+
+nav:
+    - Home: index.md
+    - Installation: installation.md
+    - Tech Specs: techSpecs.md
+    - Menus: menus.md
+    - Image:
+        - LabelFromRead: image/labelfromread.md
+    - Draw:
+        - GradMagic: draw/grad-magic.md
+        - NoiseAdvanced: draw/noise-advanced.md
+        - RadialAdvanced: draw/radial-advanced.md
+        - WaterLens: draw/water-lens.md
+        - VoronoiGradient: draw/voronoi-gradient.md
+        - CellNoise: draw/cell-noise.md
+        - LineTool: draw/line-tool.md
+        - PlotScanline: draw/plot-scanline.md
+        - SliceTool: draw/slice-tool.md
+        - PerspectiveGuide: draw/perspective-guide.md
+        - DasGrain: draw/das-grain.md
+        - LumaGrain: draw/luma-grain.md
+        - GrainAdvanced: draw/grain-advanced.md
+        - X_Tesla: draw/x-tesla.md
+        - FlareSuperStar: draw/flare-super-star.md
+        - AutoFlare: draw/auto-flare.md
+        - Expression AG:
+            - Overview: draw/expression-ag/index.md
+            - UV_Map: draw/expression-ag/uv-map.md
+        - Hagbarth Tools:
+            - Silk: draw/hagbarth/silk.md
+            - Gradient Editor: draw/hagbarth/gradient-editor.md
+            - SpotFlare: draw/hagbarth/spot-flare.md
+    - Time:
+        - apLoop: time/ap-loop.md
+        - Looper: time/looper.md
+        - FrameMedian: time/frame-median.md
+        - TimeMachine: time/time-machine.md
+        - FrameFiller: time/frame-filler.md
+    - Channel:
+        - BinaryAlpha: channel/binary-alpha.md
+        - ChannelCombiner: channel/channel-combiner.md
+        - ChannelControl: channel/channel-control.md
+        - ChannelCreator: channel/channel-creator.md
+        - InjectMatteChannel: channel/inject-matte-channel.md
+        - StreamCart: channel/stream-cart.md
+        - RenameChannels: channel/rename-channels.md
+    - Color:
+        - BlacksMatch: color/blacks-match.md
+        - ColorCopy: color/color-copy.md
+        - Contrast: color/contrast.md
+        - GradeLayerPass: color/grade-layer-pass.md
+        - HighlightSuppress: color/highlight-suppress.md
+        - ShadowMult: color/shadow-mult.md
+        - WhiteSoftClip: color/white-soft-clip.md
+        - WhiteBalance: color/white-balance.md
+        - apColorSampler: color/ap-color-sampler.md
+        - apVignette: color/ap-vignette.md
+        - GammaPlus: color/gamma-plus.md
+        - MonochromePlus: color/monochrome-plus.md
+        - Suppress_RGBCMY: color/suppress-rgbcmy.md
+        - BiasedSaturation: color/biased-saturation.md
+        - HSL_Tool: color/hsl-tool.md
+    - Filter:
+        - Glows:
+            - apGlow: filter/glows/ap-glow.md
+            - ExponGlow: filter/glows/expon-glow.md
+            - Glow_Exponential: filter/glows/glow-exponential.md
+            - Optical Glow: filter/glows/optical-glow.md
+        - Blur:
+            - ExponBlurSimple: filter/blur/expon-blur-simple.md
+            - Directional Blur: filter/blur/directional-blur.md
+            - IBlur: filter/blur/iblur.md
+            - WaveletBlur: filter/blur/wavelet-blur.md
+            - FractalBlur: filter/blur/fractal-blur.md
+        - Edges:
+            - apEdgePush: filter/edges/ap-edge-push.md
+            - EdgeDetectAlias: filter/edges/edge-detect-alias.md
+            - AntiAliasFilter: filter/edges/anti-alias-filter.md
+            - ErodeSmooth: filter/edges/erode-smooth.md
+            - Edge_RimLight: filter/edges/edge-rim-light.md
+            - EdgeDetectPRO: filter/edges/edge-detect-pro.md
+            - Erode_Fine: filter/edges/erode-fine.md
+            - Edge_Expand: filter/edges/edge-expand.md
+            - Edge: filter/edges/edge.md
+            - ColourSmear: filter/edges/colour-smear.md
+            - KillOutline: filter/edges/kill-outline.md
+            - EdgeFromAlpha: filter/edges/edge-from-alpha.md
+            - VectorExtendEdge: filter/edges/vector-extend-edge.md
+        - Distortions:
+            - Glass: filter/distort/glass.md
+            - HeatWave: filter/distort/heat-wave.md
+            - X_Distort: filter/distort/x-distort.md
+        - X_Tools XM:
+            - X_Aton: filter/x-tools/x-aton.md
+            - X_Denoise: filter/x-tools/x-denoise.md
+            - X_Sharpen: filter/x-tools/x-sharpen.md
+            - X_Soften: filter/x-tools/x-soften.md
+        - BeautifulSkin: filter/beautiful-skin.md
+        - BlacksExpon: filter/blacks-expon.md
+        - Halation: filter/halation.md
+        - Highpass: filter/highpass.md
+        - Diffusion: filter/diffusion.md
+        - LightWrapPro: filter/lightwrap-pro.md
+        - bm_Lightwrap: filter/bm-lightwrap.md
+        - iConvolve: filter/iconvolve.md
+        - ConvolutionMatrix: filter/convolution-matrix.md
+        - apChroma: filter/apchroma.md
+        - apChromaTransform: filter/apchroma-transform.md
+        - apChromaBlur: filter/apchroma-blur.md
+        - apChromaUnpremult: filter/apchroma-unpremult.md
+        - apChromaPremult: filter/apchroma-premult.md
+        - apChromaMerge: filter/apchroma-merge.md
+        - Chromatik: filter/chromatik.md
+        - CatsEyeDefocus: filter/cats-eye-defocus.md
+        - DefocusSwirlyBokeh: filter/defocus-swirly-bokeh.md
+        - deHaze: filter/dehaze.md
+        - RankFilter: filter/rank-filter.md
+        - DeflickerVelocity: filter/deflicker-velocity.md
+        - FillSampler: filter/fill-sampler.md
+        - MECfiller: filter/mec-filler.md
+    - Keyer:
+        - apDespill: keyer/ap-despill.md
+        - SpillCorrect: keyer/spill-correct.md
+        - DespillToColor: keyer/despill-to-color.md
+        - AdditiveKeyerPro: keyer/additive-keyer-pro.md
+        - apeScreenClean: keyer/ape-screen-clean.md
+        - apScreenGrow: keyer/ap-screen-grow.md
+        - KeyChew: keyer/key-chew.md
+        - LumaKeyer: keyer/luma-keyer.md
+    - Merge:
+        - ContactSheetAuto: merge/contact-sheet-auto.md
+        - KeymixBBox: merge/keymix-bbox.md
+        - MergeAtmos: merge/merge-atmos.md
+        - MergeBlend: merge/merge-blend.md
+        - MergeAll: merge/merge-all.md
+    - Transform:
+        - Vector Math Tools: transform/vector-math-tools.md
+        - VectorTracker: transform/vector-tracker.md
+        - AutoCropTool: transform/auto-crop-tool.md
+        - BBoxToFormat: transform/bbox-to-format.md
+        - ImagePlane3D: transform/image-plane-3d.md
+        - Matrix4x4_Inverse: transform/matrix4x4-inverse.md
+        - Matrix4x4_Math: transform/matrix4x4-math.md
+        - MirrorBorder: transform/mirror-border.md
+        - TransformCutOut: transform/transform-cut-out.md
+        - iMorph: transform/imorph.md
+        - RP_Reformat: transform/rp-reformat.md
+        - InverseMatrix33: transform/inverse-matrix33.md
+        - InverseMatrix44: transform/inverse-matrix44.md
+        - CardToTrack: transform/card-to-track.md
+        - CProject: transform/cproject.md
+        - TProject: transform/tproject.md
+        - STiCKiT: transform/stickit.md
+        - TransformMatrix: transform/transform-matrix.md
+        - CornerPin2D_Matrix: transform/cornerpin2d-matrix.md
+        - IIDistort: transform/iidistort.md
+        - CameraShake: transform/camera-shake.md
+        - MorphDissolve: transform/morph-dissolve.md
+        - ITransform: transform/itransform.md
+        - RotoCentroid: transform/roto-centroid.md
+        - STMapInverse: transform/stmap-inverse.md
+        - Transform_Mix: transform/transform-mix.md
+        - PlanarProjection: transform/planar-projection.md
+        - Reconcile3DFast: transform/reconcile3d-fast.md
+    - 3D:
+        - aPCard: 3d/ap-card.md
+        - DummyCam: 3d/dummy-cam.md
+        - mScatterGeo: 3d/m-scatter-geo.md
+        - Origami: 3d/origami.md
+        - RayDeepAO: 3d/ray-deep-ao.md
+        - SceneDepthCalculator: 3d/scene-depth-calculator.md
+        - SSMesh: 3d/ss-mesh.md
+        - Unify3DCoordinate: 3d/unify-3d-coordinate.md
+        - UVEditor: 3d/uv-editor.md
+        - Distance3D: 3d/distance-3d.md
+        - DistanceBetween_CS: 3d/distance-between-cs.md
+        - Lightning3D: 3d/lightning-3d.md
+        - GeoToPoints: 3d/geo-to-points.md
+        - Noise3DTexture: 3d/noise-3d-texture.md
+        - GodRaysProjector: 3d/god-rays-projector.md
+    - Particles:
+        - WaterSchmutz: particles/waterschmutz.md
+        - Sparky: particles/sparky.md
+        - RainMaker: particles/rainmaker.md
+        - ParticleLights: particles/particlelights.md
+        - ParticleKiller: particles/particlekiller.md
+    - Deep:
+        - Deep2VP Suite: deep/deep2vp.md
+        - DeepFromDepth: deep/deepfromdepth.md
+        - DeepToPosition: deep/deeptoposition.md
+        - DeepRecolorMatte: deep/deeprecolormatte.md
+        - DeepMerge_Advanced: deep/deepmerge-advanced.md
+        - DeepCropSoft: deep/deepcropsoft.md
+        - DeepKeyMix: deep/deepkeymix.md
+        - DeepHoldoutSmoother: deep/deepholdoutsmoother.md
+        - DeepCopyBBox: deep/deepcopybbox.md
+        - DeepBoolean: deep/deepboolean.md
+        - DeepFromPosition: deep/deepfromposition.md
+        - DeepSampleCount: deep/deepsamplecount.md
+        - DeepSer: deep/deepser.md
+    - CG:
+        - UV_Mapper: cg/uv-mapper.md
+        - PNZ Suite: cg/pnz-suite.md
+        - Pos Toolkit: cg/pos-toolkit.md
+        - Noise3D: cg/noise3d.md
+        - Noise4D: cg/noise4d.md
+        - Relight_Simple: cg/relight-simple.md
+        - Reproject3D: cg/reproject3d.md
+        - C44Kernal: cg/c44kernal.md
+        - apDirLight: cg/apdirlight.md
+        - apFresnel: cg/apfresnel.md
+        - CameraNormals: cg/cameranormals.md
+        - NormalsRotate: cg/normalsrotate.md
+        - EnvReflect_BB: cg/envreflect-bb.md
+        - Relight_BB: cg/relight-bb.md
+        - N_Reflection: cg/n-reflection.md
+        - SimpleSSS: cg/simplesss.md
+        - aPmatte: cg/apmatte.md
+        - P_Project: cg/p-project.md
+        - GlueP: cg/gluep.md
+        - P_Ramp: cg/p-ramp.md
+        - P_NoiseAdvanced: cg/p-noiseadvanced.md
+    - Curves:
+        - WaveMachine: curves/wavemachine.md
+        - Randomizer: curves/randomizer.md
+        - AnimationCurve: curves/animationcurve.md
+        - CurveRemapper: curves/curveremapper.md
+        - NoiseGen: curves/noisegen.md
+    - Utilities:
+        - GUI_Switch: utilities/gui-switch.md
+        - NAN_INF_Killer: utilities/nan-inf-killer.md
+        - apViewerBlocker: utilities/apviewerblocker.md
+        - Python_and_TCL: utilities/python-and-tcl.md
+        - RotoQC: utilities/rotoqc.md
+        - bm_MatteCheck: utilities/bm-mattecheck.md
+        - ViewerRender: utilities/viewerrender.md
+        - NukeZ: utilities/nukez.md
+        - Pyclopedia: utilities/pyclopedia.md
+    - Templates:
+        - Advanced Keying Template: workflow-templates/advanced-keying-template.md
+        - Advanced Keying Template Stamps: workflow-templates/advanced-keying-template-stamps.md
+        - STMap Keyer Setup: workflow-templates/stmap-keyer-setup.md
+        - Gizmo Demo Scripts: workflow-templates/gizmo-demo-scripts.md
+    - About: about.md
+
+theme:
+    name: material
+    features:
+        # - navigation.tabs # Disabled to keep sidebar overview
+        # - navigation.sections # Disabled: We are using expand for full overview
+        - navigation.instant # Enabled: SPA-like navigation (no reloads)
+        - navigation.expand # Enabled: Expands navigation by default for better overview
+        - navigation.top
+        - navigation.tracking # Enabled: Highlights active page
+        - search.suggest
+        - search.highlight
+        - content.code.copy
+    palette:
+        # Dark mode (default)
+        - scheme: slate
+          primary: blue
+          accent: orange
+          toggle:
+            icon: material/brightness-4
+            name: Switch to light mode
+        # Light mode
+        - scheme: default
+          primary: blue
+          accent: orange
+          toggle:
+            icon: material/brightness-7
+            name: Switch to dark mode
+    font:
+        text: Lato
+        code: JetBrains Mono
+
+markdown_extensions:
+    - toc:
+        toc_depth: 2
+    - admonition
+    - pymdownx.details
+    - pymdownx.superfences
+    - pymdownx.tabbed:
+        alternate_style: true
+
+extra_javascript:
+    - js/video-swap.js
+    - js/external-links.js
+    - js/force-sidebar-scroll.js
+
+extra_css:
+    # - css/custom.css # Commented out to use native Material theme styling
+    - css/material-custom.css

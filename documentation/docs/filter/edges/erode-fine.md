@@ -1,0 +1,14 @@
+# Erode_Fine SPIN
+
+**Author:** Spin FX
+
+<div class="video-container" data-video-id="381270956" data-video-type="vimeo" data-thumbnail="../img/tools/filter/edges/erode-fine-thumb.webp">
+</div>
+
+- [http://www.nukepedia.com/gizmos/other/spin_nuke_gizmos-1](http://www.nukepedia.com/gizmos/other/spin_nuke_gizmos-1)
+- [https://github.com/SpinVFX/spin_nuke_gizmos](https://github.com/SpinVFX/spin_nuke_gizmos)
+- Video: [https://vimeo.com/381270956](https://vimeo.com/381270956)
+
+Erode an image with fine controls, as opposed to Nuke's default erode node which can only erode full pixels.
+
+![erode-fine-1.webp](../../img/tools/filter/edges/erode-fine-1.webp)

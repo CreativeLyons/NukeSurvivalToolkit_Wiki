@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.venv/
+venv/
+env/
+
+# MkDocs local build output
+site/
+documentation/site/
+
+# PDF artifacts
+*.pdf
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
