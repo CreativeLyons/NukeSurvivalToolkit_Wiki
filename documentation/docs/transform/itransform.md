@@ -1,21 +1,57 @@
-# ITransform FR
+# iTransform_ae AE
 
-**Author:** Frank Rueter - [http://www.ohufx.com](http://www.ohufx.com)
+**Author:** Aitor Echeveste - [https://aitorecheveste.com](https://aitorecheveste.com)
 
-![itransform-2.webp](../img/tools/transform/itransform-2.webp)
+- [https://aitorecheveste.com/aetransform-overview/](https://aitorecheveste.com/aetransform-overview/)
+- [https://www.nukepedia.com/tools/gizmos/transform/aetransform/](https://www.nukepedia.com/tools/gizmos/transform/aetransform/)
+- [https://github.com/aitorecheveste/aeTools](https://github.com/aitorecheveste/aeTools)
 
-- [http://www.nukepedia.com/gizmos/transform/itransform/](http://www.nukepedia.com/gizmos/transform/itransform/)
+![itransform-ae-1.webp](../img/tools/transform/itransform-ae-1.webp)
 
-Updated version of Frank Rueter's ITransform tool on nukepedia.
+![itransform-ae-3.webp](../img/tools/transform/itransform-ae-3.webp)
 
-Mask based warper with transform controls.
-### Updates include:
+aeTransform (iTransform_ae) is a lightweight Smart Transform Gizmo for small adjustments to elements without using heavy distortion methods. Unlike IDistort or GridWarp, it performs quick modifications without slowing down scripts.
 
-- **Channels:** defaults to all channels but you can select channel to warp
-- **Set Center Button:** Click to set to the center of the root.format or the input.format
-- **Black Outside Before/After:** Click to apply a black outside before and/or after the warp, this can eliminate unwanted stretching edge pixels because of bounding box issues.
-- **Crop To Format and Add Pixels:** More options for BBox management
-- **Mix:** Using a transformMasked node instead of a transform, so the node is able to mix the warp effect
-Otherwise the node reacts the same way as the original ITransform node.
+### Key Features
 
-![itransform-1.webp](../img/tools/transform/itransform-1.webp)
+- **Ultra-Lightweight Processing** – No need for warps or distortions
+- **Precise Local Adjustments** – Modify specific areas with masking controls
+- **Ideal for Small Transformations** – Perfect for minor shape adjustments
+- **Fast Performance** – Works efficiently without slowing down scripts
+
+### How It Works
+
+- Uses a basic transformation model instead of resource-heavy warping
+- Allows scaling, rotation, and positional adjustments efficiently
+- Masking support lets artists define specific transformation areas
+- Works independently of Nuke's distortion nodes
+
+![itransform-ae-2.webp](../img/tools/transform/itransform-ae-2.webp)
+
+### Best Use Cases
+
+1. **Refining rotoscoped elements** – Small refinements to rotoscoped shapes
+2. **Correcting minor misalignments** – Fix small shifts without excessive re-tracking
+3. **Masked transformations** – Apply localized transforms to specific image areas
+4. **Fast motion adjustments** – Aligning layers, match-moving, or quick position fixes
+
+### How to Use
+
+1. Download from Nukepedia or GitHub; add the gizmo to your script and restart if needed
+2. Connect the input image; adjust position, rotation, or scale
+3. Enable the mask input to control which areas are affected
+4. Toggle bypass to compare before and after
+
+### Best Practices
+
+- Use for small, precise transformations—avoid large-scale warping
+- Combine with RotoPaint, Tracker, and Transform nodes
+- Precomp static transformations when using multiple Smart Transform nodes
+
+### Common Mistakes
+
+- Applying large distortions (use GridWarp or IDistort instead)
+- Forgetting to use masking for targeted transforms
+- Stacking too many transformations (consider merging transforms)
+
+For **small transformations**, aeTransform is faster than IDistort or GridWarp. For **complex warping**, use those tools instead.

@@ -29,3 +29,6 @@ documentation/.cache/
 
 # Logs
 *.log
+
+# New tools tracking
+.new_tools/
