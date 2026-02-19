@@ -18,10 +18,13 @@ nav:
     - Image:
         - LabelFromRead: image/labelfromread.md
     - Draw:
-        - GradMagic: draw/grad-magic.md
+        - ConstantPro: draw/constant-pro.md
         - HexColor: draw/hex-color.md
+        - GradMagic: draw/grad-magic.md
         - NoiseAdvanced: draw/noise-advanced.md
         - RadialAdvanced: draw/radial-advanced.md
+        - SpotLight: draw/spotlight.md
+        - RingsOfPower: draw/rings-of-power.md
         - WaterLens: draw/water-lens.md
         - VoronoiGradient: draw/voronoi-gradient.md
         - CellNoise: draw/cell-noise.md
@@ -55,6 +58,7 @@ nav:
         - ChannelCreator: channel/channel-creator.md
         - InjectMatteChannel: channel/inject-matte-channel.md
         - StreamCart: channel/stream-cart.md
+        - IDExtractor: channel/id-extractor.md
         - RenameChannels: channel/rename-channels.md
     - Color:
         - BlacksMatch: color/blacks-match.md
@@ -102,6 +106,7 @@ nav:
             - EdgeFromAlpha: filter/edges/edge-from-alpha.md
             - VectorExtendEdge: filter/edges/vector-extend-edge.md
         - Distortions:
+            - apEdgeCrush: filter/distort/ap-edge-crush.md
             - FastComplexity_Distort: filter/distort/fast-complexity-distort.md
             - Glass: filter/distort/glass.md
             - HeatWave: filter/distort/heat-wave.md
@@ -165,6 +170,7 @@ nav:
         - MirrorBorder: transform/mirror-border.md
         - TransformCutOut: transform/transform-cut-out.md
         - iMorph: transform/imorph.md
+        - Symmetry: transform/symmetry.md
         - RP_Reformat: transform/rp-reformat.md
         - InverseMatrix33: transform/inverse-matrix33.md
         - InverseMatrix44: transform/inverse-matrix44.md
@@ -198,6 +204,7 @@ nav:
         - Lightning3D: 3d/lightning-3d.md
         - GeoToPoints: 3d/geo-to-points.md
         - Noise3DTexture: 3d/noise-3d-texture.md
+        - MirrorDimension: 3d/mirror-dimension.md
         - GodRaysProjector: 3d/god-rays-projector.md
     - Particles:
         - WaterSchmutz: particles/waterschmutz.md
