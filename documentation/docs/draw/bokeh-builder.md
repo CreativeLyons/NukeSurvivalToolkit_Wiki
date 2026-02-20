@@ -6,29 +6,15 @@
 
 - [https://www.nukepedia.com/tools/gizmos/draw/bokeh-builder/](https://www.nukepedia.com/tools/gizmos/draw/bokeh-builder/)
 
-Procedurally generates custom bokeh shapes to drive defocus effects. Use the output as a kernel in a lens blur or convolve node to achieve artistic and physically-grounded out-of-focus looks.
+'Bokeh Builder' is designed to give control over artistic and grungey bokeh shapes, made from scratch.
 
-Two base types are available — **circular** and **spiked** — each with its own sub-type picker. A preset library with twelve named looks lets you get started quickly, or build a shape from scratch using the layered controls.
+Whilst Nuke's flare tool is very versatile, getting results that can easily be configured and altered on the fly can be quite time-consuming: and so this gizmo is designed to do all the work for you!
 
-### Controls
+Giving a user a bunch of presets to work from, or the option to start from scratch, Bokeh Builder has been created as part of a smaller lens simulation project and me needing to be able to create varied bokeh shapes easily and quickly. With options controlling noise, glass artifacts, overall shape, ring compression and various other features found in real life bokeh, this gizmo can be used to easily create interesting shapes to drive defocusing in an artistic way.
 
-- **Quality** — sets the render quality of the bokeh kernel
-- **Anamorph** — stretches the shape horizontally, simulating anamorphic lens bokeh
-- **Rotation** — rotates the entire shape
-- **Gamma** — adjusts overall falloff
-- **Grain** — adds fine grain texture to the shape
+I needed this done quickly and as such I've only spent around 6/8 hours on it, so it may be a little rough around the edges. If there are any problems at all please contact me and I'll get on some bug fixes straight away.
 
-### Noise layers
-
-- **Noise** — procedural noise with controls for size, gain, gamma, and strength
-- **Natural noise** — five organic noise types: wavy, streaks, blobs, spiky blobs, inverted blobs
-- **Rings** — adds concentric ring detail with thickness and strength controls
-
-### Chromatic effects
-
-- **Inner chroma** — chromatic aberration inside the shape with tint, size, and falloff
-- **Outer chroma** — chromatic aberration around the edge with tint, size, and strength
-- **Distortion** — warps the shape using a noise field with size, detail, and strength
+Thanks for your support!
 
 ![bokeh-builder-1.webp](../img/tools/draw/bokeh-builder-1.webp)
 

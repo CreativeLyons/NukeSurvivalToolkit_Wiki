@@ -2,34 +2,29 @@
 
 **Author:** Andrea Geremia - [https://www.andreageremia.it](https://www.andreageremia.it)
 
-![roto-paint-transform-1.webp](../img/tools/transform/roto-paint-transform-1.webp)
+<div class="video-container" data-video-id="403958094" data-video-type="vimeo" data-thumbnail="../img/tools/transform/roto-paint-transform-1.webp">
+</div>
 
 - [https://www.nukepedia.com/tools/gizmos/transform/rotopaint-transform/](https://www.nukepedia.com/tools/gizmos/transform/rotopaint-transform/)
+- [https://vimeo.com/403958094](https://vimeo.com/403958094)
+- [https://youtu.be/5gLyf6db7mk?t=5814](https://youtu.be/5gLyf6db7mk?t=5814)
 
-Move image elements directly with a brush instead of placing transform nodes or Grid Warp. Paint over the areas you want to shift and the gizmo uses an STMap to apply the warp with frame-accurate control.
+Move your elements directly with a brush instead of using transform nodes or Grid/Spline Warp.
 
-Connect your footage, click **Select Brush**, and paint to reposition elements. Each stroke displaces the underlying pixels by the painted offset. Use the **smooth** slider to soften transitions at stroke edges, and the **Mix** knob to blend the result back with the original.
+It's much easier to use this node. You will save a lot of time!
 
-Two internal operation modes are available: **UV Map** (direct remap, no extra controls) and **Vector** (the paint drives an iDistort node, exposing offset and scale knobs for fine-tuning strength).
+Sometimes you have to move some parts of the plate/element every frame and using Rotoshape and Transform could be really annoying and slow.
 
-### Controls
+With RotoPaint Transform, you can use just the brush to move directly the elements. You can decide the strenght and the smoothness of each brush and animate the mix overall.
 
-- **Operation** — UV Map or Vector distort mode
-- **Filter** — resampling filter used by the STMap (Impulse, Cubic, Keys, etc.)
-- **UV offset / UV scale** — available in Vector mode to adjust distortion strength
-- **Smooth** — blurs the painted warp map
-- **Output** — switch between Final Result, UV Map, or Vector
+Connect the node to the image, click the button 'Select Brush' and start to paint.
 
-### Paint controls
-
-- **Opacity / Brush hardness / Brush spacing** — standard RotoPaint brush settings
-- **Lifetime type / from / to** — constrain paint strokes to a frame range
-- **Mask** — channel-based mask input
-
-### Transform tab
-
-Exposes the internal RotoPaint transform, allowing track data to be linked or baked in.
+Personally I use often this technique with FX and elements like Lightnings, when you want to customize the position of some parts.
 
 **Inputs:** img · mask
+
+<video autoplay loop muted playsinline>
+  <source src="../img/tools/transform/roto-paint-transform-4.mp4" type="video/mp4">
+</video>
 
 ![roto-paint-transform-2.webp](../img/tools/transform/roto-paint-transform-2.webp)

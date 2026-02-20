@@ -6,16 +6,27 @@
 
 - [https://www.nukepedia.com/tools/gizmos/time/framehold-special/](https://www.nukepedia.com/tools/gizmos/time/framehold-special/)
 
-An enhanced FrameHold that lets you define both the frame to hold and the frame range over which the hold is active — without keyframes.
+Classic FrameHold node with more features.
 
-In **Always** mode it behaves identically to Nuke's built-in FrameHold. In **Range** mode you set a start and end frame; outside that range the original footage plays normally. An optional **continue plate** checkbox causes the footage to resume from the held frame's next frame once the range ends, rather than jumping back to the live plate at the same timecode.
+Compared to the classic FrameHold node, this one has something SPECIAL: Pick a frame and use it for the frame range that you prefer!
 
-### Usage
+The gizmo doesn't use keyframe, but just FrameRange and AppendClip.
 
-1. Connect your footage to the input
-2. Set **Frame Hold** to the frame you want frozen
-3. Switch type to **Range** and enter a start and end frame
-4. Enable **continue plate after Framehold** if you want the plate to resume seamlessly after the hold
+Here a small explanation:
+
+When you connect the node to the footage, you can choose the frame to hold.
+
+With checkbox 'pause the original plate' you can stop the original footage and then take it back after the FrameHold.
+
+For example, frame range of your Footage is going from 1001 to 1050.
+
+I would like to lock the frame 1010 in this frame range: 1010-1020, like in the previous images
+
+If your checkbox is unchecked, the final frame range will be the same: 1001-1050. Basically the footage won't be stopped, but the Frame Hold will replace the footage in the frame range specified, so 1010-1020.
+
+If your checkbox is checked, the final frame range will be: 1001-1061. That's why the footage will be stopped after frame 1009 (I would like to lock the frame in the frame range: 1010-1020, so for 11 frames). After frame 1020 my footage will restart from frame 1010, when I stopped it before.
+
+At the end my new frame range is 1000-1061.
 
 **Inputs:** img
 
@@ -24,3 +35,9 @@ In **Always** mode it behaves identically to Nuke's built-in FrameHold. In **Ran
 ![frame-hold-special-3.webp](../img/tools/time/frame-hold-special-3.webp)
 
 ![frame-hold-special-4.webp](../img/tools/time/frame-hold-special-4.webp)
+
+![frame-hold-special-5.webp](../img/tools/time/frame-hold-special-5.webp)
+
+![frame-hold-special-6.webp](../img/tools/time/frame-hold-special-6.webp)
+
+![frame-hold-special-7.webp](../img/tools/time/frame-hold-special-7.webp)

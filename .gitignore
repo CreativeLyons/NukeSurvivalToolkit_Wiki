@@ -19,6 +19,9 @@ documentation/.cache/
 # Release artifacts
 *.zip
 
+# Claude agent notes
+CLAUDE.md
+
 # PDF artifacts
 *.pdf
 !documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf

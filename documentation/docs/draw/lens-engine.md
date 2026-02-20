@@ -6,41 +6,34 @@
 
 - [https://www.nukepedia.com/tools/gizmos/draw/lens-engine/](https://www.nukepedia.com/tools/gizmos/draw/lens-engine/)
 
-A comprehensive lens flare, lens FX, and glass reflection simulator built as a single self-contained gizmo. Position the flare source with a 2D point control, then independently enable and adjust each optical element through a tabbed UI.
+A lens flare, lens FX, glass reflection and lens simulator for Nuke.
 
-Built as part of a research project into lens optics, drawing design inspiration from Doug Hogan's Flare Factory and Vincent Wauters' AutoFlare, with improved concatenation and additional FX layers.
+Lens flares! JJ Abrams loves them, and now **you** can love them too. This gizmo was built as part of a research project looking into flares and drawing certain elements of flares in an easy-to-use and clear way.
 
-### Core elements (Cores tab)
+A lot of the design elements of the tool are adapted from Doug Hogan's Flare Factory, and the glass reflections from Vincent Wauters' Auto Flare, but with improved concatenation and a bunch more additional features and elements to draw. The main goal of this project was to combine existing tools into one 'super' lens flare tool, and improve the features and UI along the way. Lens Engine should be a little faster and clearer to use than Flare Factory, but of course Doug gets the credit for the design of the spectacular elements and pieces that make up the flares - I just cleaned things up a little.
 
-- **Core** — central bright spot with type picker: white orb, anamorphic, hot orb, prism
-- **Core rays** — star burst rays with thickness, rotation, and seed controls
-- **Core corona** — inner corona ring with noise and tint
-- **Extra corona** — secondary outer corona ring
+### New features include
 
-### Anomalies tab
+- Sped up node graphs with cleaner concatenation
+- The ability to use custom lens dirt images
+- 'Normals-based' lens dirt, ensuring that the dirt is illuminated from the light source
+- Clearer and more-compact UI
+- The ability to preview all falloff radiuses and masks when adjusting keying tolerance and radials
+- 'Dog schidt' optics (these are still WIP and prone to breaking sometimes)
+- Frame ghosting and glass reflections
+- The ability to calculate most post FX either pre-flare, or post-flare
+- Additional screen space FX such as center blooming and edge blooming
+- Photographically-based bloom FX, allowing for striped bloom or sharp radial bloom
+- Lens FX such as vignetting, edge blur, chroma shifting and lens distortion
+- Global size controls adjusting all features of the lens flare
+- Additional elements to draw
 
-- **Lens anomaly** — secondary orb-style artifact that tracks along the flare axis
-- **Dog schidt** — elongated streak artifact with thickness, falloff, and anamorph controls
-- **Frame ghosting** — up to four independent ghost reflections with shape, diaphragm, and noise controls
+I also created Bokeh Builder as part of this project, so check that out too for some natural looking bokeh shapes!
 
-### Lens pieces tab
+Some parts are a little rickety so may take some fine tuning and I'm still working on building presets - but it's getting there. If there are any problems at all please contact me and I'll get on some bug fixes straight away.
 
-- **Main pieces** — small randomised bokeh-shaped elements scattered along the axis
-- **Big pieces** — larger individual lens flare elements
-- **Rings** — circular ring artifacts
-- **Lines** — linear streak elements
+Seeing as this was part of a research project, I'm also looking for feedback on the gizmo. There's a 1minute survey here for logging people's thoughts on it, so if you download the tool and have some feedback then please do fill it in [http://goo.gl/forms/cl1tgdVtUD](http://goo.gl/forms/cl1tgdVtUD) - any feedback is useful!
 
-### Screen FX tab
-
-- **Bloom** — threshold-based bloom with center, edge, and photographically-based modes
-- **Edge shimmer** — shimmer glow along the frame edge
-- **Vignetting** — adjustable vignette with region controls
-- **Edge blur** — softens the frame edges
-- **Chroma shift** — chromatic aberration with red/green/blue axis controls
-- **Lens distortion** — barrel/pincushion distortion with two coefficients
-
-### Lens dirt tab
-
-- **Lens dirt** — choose from built-in patterns (water, scratches, streaks) or a custom input; supports simple and normals-based calculation modes with bokeh blur option
+Thanks for your support!
 
 ![lens-engine-1.webp](../img/tools/draw/lens-engine-1.webp)
