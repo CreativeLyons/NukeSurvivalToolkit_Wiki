@@ -18,9 +18,13 @@ nav:
     - Image:
         - LabelFromRead: image/labelfromread.md
     - Draw:
+        - ConstantPro: draw/constant-pro.md
+        - HexColor: draw/hex-color.md
         - GradMagic: draw/grad-magic.md
         - NoiseAdvanced: draw/noise-advanced.md
         - RadialAdvanced: draw/radial-advanced.md
+        - SpotLight: draw/spotlight.md
+        - RingsOfPower: draw/rings-of-power.md
         - WaterLens: draw/water-lens.md
         - VoronoiGradient: draw/voronoi-gradient.md
         - CellNoise: draw/cell-noise.md
@@ -54,6 +58,7 @@ nav:
         - ChannelCreator: channel/channel-creator.md
         - InjectMatteChannel: channel/inject-matte-channel.md
         - StreamCart: channel/stream-cart.md
+        - IDExtractor: channel/id-extractor.md
         - RenameChannels: channel/rename-channels.md
     - Color:
         - BlacksMatch: color/blacks-match.md
@@ -70,6 +75,7 @@ nav:
         - MonochromePlus: color/monochrome-plus.md
         - Suppress_RGBCMY: color/suppress-rgbcmy.md
         - BiasedSaturation: color/biased-saturation.md
+        - aeRelight2D: color/ae-relight2d.md
         - HSL_Tool: color/hsl-tool.md
     - Filter:
         - Glows:
@@ -87,6 +93,8 @@ nav:
             - apEdgePush: filter/edges/ap-edge-push.md
             - EdgeDetectAlias: filter/edges/edge-detect-alias.md
             - AntiAliasFilter: filter/edges/anti-alias-filter.md
+            - GuidedBlur: filter/edges/guided-blur.md
+            - iErode: filter/edges/i-erode.md
             - ErodeSmooth: filter/edges/erode-smooth.md
             - Edge_RimLight: filter/edges/edge-rim-light.md
             - EdgeDetectPRO: filter/edges/edge-detect-pro.md
@@ -98,6 +106,8 @@ nav:
             - EdgeFromAlpha: filter/edges/edge-from-alpha.md
             - VectorExtendEdge: filter/edges/vector-extend-edge.md
         - Distortions:
+            - apEdgeCrush: filter/distort/ap-edge-crush.md
+            - FastComplexity_Distort: filter/distort/fast-complexity-distort.md
             - Glass: filter/distort/glass.md
             - HeatWave: filter/distort/heat-wave.md
             - X_Distort: filter/distort/x-distort.md
@@ -121,16 +131,21 @@ nav:
         - apChromaUnpremult: filter/apchroma-unpremult.md
         - apChromaPremult: filter/apchroma-premult.md
         - apChromaMerge: filter/apchroma-merge.md
+        - ChromaSmear: filter/chroma-smear.md
         - Chromatik: filter/chromatik.md
+        - aeShadows: filter/ae-shadows.md
         - CatsEyeDefocus: filter/cats-eye-defocus.md
+        - fxT_ChromaticAberration: filter/fxt-chromatic-aberration.md
         - DefocusSwirlyBokeh: filter/defocus-swirly-bokeh.md
         - deHaze: filter/dehaze.md
+        - RadialDilate: filter/radial-dilate.md
         - RankFilter: filter/rank-filter.md
         - DeflickerVelocity: filter/deflicker-velocity.md
         - FillSampler: filter/fill-sampler.md
         - MECfiller: filter/mec-filler.md
     - Keyer:
         - apDespill: keyer/ap-despill.md
+        - PointCloudKeyer: keyer/point-cloud-keyer.md
         - SpillCorrect: keyer/spill-correct.md
         - DespillToColor: keyer/despill-to-color.md
         - AdditiveKeyerPro: keyer/additive-keyer-pro.md
@@ -155,6 +170,7 @@ nav:
         - MirrorBorder: transform/mirror-border.md
         - TransformCutOut: transform/transform-cut-out.md
         - iMorph: transform/imorph.md
+        - Symmetry: transform/symmetry.md
         - RP_Reformat: transform/rp-reformat.md
         - InverseMatrix33: transform/inverse-matrix33.md
         - InverseMatrix44: transform/inverse-matrix44.md
@@ -188,6 +204,7 @@ nav:
         - Lightning3D: 3d/lightning-3d.md
         - GeoToPoints: 3d/geo-to-points.md
         - Noise3DTexture: 3d/noise-3d-texture.md
+        - MirrorDimension: 3d/mirror-dimension.md
         - GodRaysProjector: 3d/god-rays-projector.md
     - Particles:
         - WaterSchmutz: particles/waterschmutz.md
@@ -198,7 +215,6 @@ nav:
     - Deep:
         - Deep2VP Suite: deep/deep2vp.md
         - DeepFromDepth: deep/deepfromdepth.md
-        - DeepToPosition: deep/deeptoposition.md
         - DeepRecolorMatte: deep/deeprecolormatte.md
         - DeepMerge_Advanced: deep/deepmerge-advanced.md
         - DeepCropSoft: deep/deepcropsoft.md
@@ -210,6 +226,8 @@ nav:
         - DeepSampleCount: deep/deepsamplecount.md
         - DeepSer: deep/deepser.md
     - CG:
+        - aeRefracTHOR: cg/ae-refracthor.md
+        - Emission: cg/emission.md
         - UV_Mapper: cg/uv-mapper.md
         - PNZ Suite: cg/pnz-suite.md
         - Pos Toolkit: cg/pos-toolkit.md
@@ -231,6 +249,8 @@ nav:
         - GlueP: cg/gluep.md
         - P_Ramp: cg/p-ramp.md
         - P_NoiseAdvanced: cg/p-noiseadvanced.md
+        - LightSwitch: cg/light-switch.md
+        - LightSwitchPuppet: cg/light-switch-puppet.md
     - Curves:
         - WaveMachine: curves/wavemachine.md
         - Randomizer: curves/randomizer.md
