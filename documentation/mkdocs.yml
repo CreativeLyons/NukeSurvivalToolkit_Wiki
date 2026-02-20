@@ -111,7 +111,7 @@ nav:
             - VectorExtendEdge: filter/edges/vector-extend-edge.md
         - Distortions:
             - apEdgeCrush: filter/distort/ap-edge-crush.md
-            - FastComplexity_Distort: filter/distort/fast-complexity-distort.md
+            - FastComplexityDistort: filter/distort/fast-complexity-distort.md
             - Glass: filter/distort/glass.md
             - HeatWave: filter/distort/heat-wave.md
             - X_Distort: filter/distort/x-distort.md
@@ -157,6 +157,7 @@ nav:
         - apScreenGrow: keyer/ap-screen-grow.md
         - KeyChew: keyer/key-chew.md
         - LumaKeyer: keyer/luma-keyer.md
+        - SkyMatte: keyer/sky-matte.md
     - Merge:
         - ContactSheetAuto: merge/contact-sheet-auto.md
         - KeymixBBox: merge/keymix-bbox.md
