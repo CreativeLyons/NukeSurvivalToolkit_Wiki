@@ -2,10 +2,10 @@
 
 **Author:** Rafael Perez - [https://www.rafael.ai](https://www.rafael.ai)
 
+![guided-blur-1.webp](../../img/tools/filter/edges/guided-blur-1.webp)
+
 - [https://www.rafael.ai/guided_blur](https://www.rafael.ai/guided_blur)
 - [https://www.nukepedia.com/gizmos/filter/guided-blur-refine-edge](https://www.nukepedia.com/gizmos/filter/guided-blur-refine-edge)
-
-![guided-blur-1.webp](../../img/tools/filter/edges/guided-blur-1.webp)
 
 Edge-preserving blur filter, useful to add fine details to a roto/matte. Similar to Photoshop's "Refine Edge" feature. The guided filter uses a second image as a guide to preserve edge detail while blurring.
 

@@ -38,6 +38,8 @@ nav:
         - X_Tesla: draw/x-tesla.md
         - FlareSuperStar: draw/flare-super-star.md
         - AutoFlare: draw/auto-flare.md
+        - BokehBuilder: draw/bokeh-builder.md
+        - LensEngine: draw/lens-engine.md
         - Expression AG:
             - Overview: draw/expression-ag/index.md
             - UV_Map: draw/expression-ag/uv-map.md
@@ -51,6 +53,7 @@ nav:
         - FrameMedian: time/frame-median.md
         - TimeMachine: time/time-machine.md
         - FrameFiller: time/frame-filler.md
+        - FrameHoldSpecial: time/frame-hold-special.md
     - Channel:
         - BinaryAlpha: channel/binary-alpha.md
         - ChannelCombiner: channel/channel-combiner.md
@@ -89,6 +92,7 @@ nav:
             - IBlur: filter/blur/iblur.md
             - WaveletBlur: filter/blur/wavelet-blur.md
             - FractalBlur: filter/blur/fractal-blur.md
+            - MotionBlurPaint: filter/blur/motion-blur-paint.md
         - Edges:
             - apEdgePush: filter/edges/ap-edge-push.md
             - EdgeDetectAlias: filter/edges/edge-detect-alias.md
@@ -107,7 +111,7 @@ nav:
             - VectorExtendEdge: filter/edges/vector-extend-edge.md
         - Distortions:
             - apEdgeCrush: filter/distort/ap-edge-crush.md
-            - FastComplexity_Distort: filter/distort/fast-complexity-distort.md
+            - FastComplexityDistort: filter/distort/fast-complexity-distort.md
             - Glass: filter/distort/glass.md
             - HeatWave: filter/distort/heat-wave.md
             - X_Distort: filter/distort/x-distort.md
@@ -153,6 +157,7 @@ nav:
         - apScreenGrow: keyer/ap-screen-grow.md
         - KeyChew: keyer/key-chew.md
         - LumaKeyer: keyer/luma-keyer.md
+        - SkyMatte: keyer/sky-matte.md
     - Merge:
         - ContactSheetAuto: merge/contact-sheet-auto.md
         - KeymixBBox: merge/keymix-bbox.md
@@ -189,6 +194,7 @@ nav:
         - Transform_Mix: transform/transform-mix.md
         - PlanarProjection: transform/planar-projection.md
         - Reconcile3DFast: transform/reconcile3d-fast.md
+        - RotoPaintTransform: transform/roto-paint-transform.md
     - 3D:
         - aPCard: 3d/ap-card.md
         - DummyCam: 3d/dummy-cam.md
