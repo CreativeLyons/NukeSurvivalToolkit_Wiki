@@ -221,7 +221,6 @@ nav:
     - Deep:
         - Deep2VP Suite: deep/deep2vp.md
         - DeepFromDepth: deep/deepfromdepth.md
-        - DeepToPosition: deep/deeptoposition.md
         - DeepRecolorMatte: deep/deeprecolormatte.md
         - DeepMerge_Advanced: deep/deepmerge-advanced.md
         - DeepCropSoft: deep/deepcropsoft.md
@@ -256,6 +255,8 @@ nav:
         - GlueP: cg/gluep.md
         - P_Ramp: cg/p-ramp.md
         - P_NoiseAdvanced: cg/p-noiseadvanced.md
+        - LightSwitch: cg/light-switch.md
+        - LightSwitchPuppet: cg/light-switch-puppet.md
     - Curves:
         - WaveMachine: curves/wavemachine.md
         - Randomizer: curves/randomizer.md
