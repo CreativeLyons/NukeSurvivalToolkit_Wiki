@@ -1,6 +1,7 @@
-# bm_Lightwrap BM
+# bm_OpticalLightwrap BM
 
 **Author:** Ben McEwan - [https://benmcewan.com/blog/](https://benmcewan.com/blog/)
+**Node Name:** `bm_OpticalLightwrap` (legacy name: `bm_Lightwrap`)
 
 ![bm-lightwrap-2.webp](../img/tools/filter/bm-lightwrap-2.webp)
 
