@@ -20,7 +20,7 @@ The Filter category contains tools for glows, blurs, edge treatment, distortions
 | [Highpass](highpass.md) | Tony Lyons | Difference between blurred and original for tracking/sharpening |
 | [Diffusion](diffusion.md) | Tony Lyons | Mix blurred image simulating lens FX |
 | [LightWrapPro](lightwrap-pro.md) | Tony Lyons | Advanced lightwrap with exponential blurring |
-| [bm_OpticalLightwrap](bm-lightwrap.md) | Ben McEwan | Optically-correct natural lightwrap |
+| [bm_OpticalLightwrap](bm-optical-lightwrap.md) | Ben McEwan | Optically-correct natural lightwrap |
 | [iConvolve](iconvolve.md) | Adrian Pueyo | IBlur-style convolve with mask falloff |
 | [ConvolutionMatrix](convolution-matrix.md) | Andrea Geremia | Apply preset 3x3 matrix filters |
 | [apChroma](apchroma.md) | Adrian Pueyo | Advanced chromatic aberration and drift |
