@@ -231,6 +231,7 @@ nav:
         - DeepFromPosition: deep/deepfromposition.md
         - DeepSampleCount: deep/deepsamplecount.md
         - DeepSer: deep/deepser.md
+        - Deep Thickness: deep/deep-thickness.md
     - CG:
         - aeRefracTHOR: cg/ae-refracthor.md
         - Emission: cg/emission.md
