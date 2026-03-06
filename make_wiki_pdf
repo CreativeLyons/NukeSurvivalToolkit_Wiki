@@ -5,6 +5,7 @@ Current implemented targets:
 - cover
 - page2
 - technical-details
+- contact
 - special-thanks
 - pages-1-2
 - pages-1-5
@@ -35,6 +36,7 @@ PDF_BROWSER_CSS = DOC_ROOT / "docs" / "css" / "pdf-browser.css"
 COVER_IMAGE = DOC_ROOT / "docs" / "img" / "pdf" / "NukeSurvivalToolkit_Splashpage_cover.jpg"
 PAGE2_TEMPLATE = DOC_ROOT / "templates" / "page2.html"
 TECHNICAL_DETAILS_TEMPLATE = DOC_ROOT / "templates" / "technical_details.html"
+CONTACT_TEMPLATE = DOC_ROOT / "templates" / "contact.html"
 SPECIAL_THANKS_TEMPLATE = DOC_ROOT / "templates" / "special-thanks.html"
 TOOLBAR_ICON = DOC_ROOT / "docs" / "img" / "NukeSurvivalToolkit_Documentation_v2.1.0.webp"
 JETBRAINS_MONO_REGULAR = DOC_ROOT / "docs" / "assets" / "fonts" / "jetbrains-mono-400-normal-latin.woff2"
@@ -63,15 +65,15 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Build approved NST wiki PDF slices as local review artifacts. "
             "Currently implemented: cover, page2, technical-details, "
-            "special-thanks, pages-1-2, pages-1-5, full-so-far."
+            "contact, special-thanks, pages-1-2, pages-1-5, full-so-far."
         )
     )
     parser.add_argument(
         "target",
         help=(
             "Target to build. Implemented now: cover, page2, "
-            "technical-details, special-thanks, pages-1-2, pages-1-5, "
-            "full-so-far. "
+            "technical-details, contact, special-thanks, pages-1-2, "
+            "pages-1-5, full-so-far. "
             "Planned later: menu, main-sections, "
             "tool-pages, full-wiki."
         ),
@@ -314,6 +316,26 @@ def build_technical_details(*, output_path: Path, playwright_python: str, verbos
     return output_path
 
 
+def build_contact(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+    html = CONTACT_TEMPLATE.read_text(encoding="utf-8")
+    html = apply_interior_template_tokens(html)
+
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-contact.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        html_path = temp_dir / "contact.html"
+        css_path = temp_dir / "empty.css"
+        html_path.write_text(html, encoding="utf-8")
+        css_path.write_text("/* no-op */\n", encoding="utf-8")
+        render_html_to_pdf(
+            html_path,
+            output_path,
+            css_path=css_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+    return output_path
+
+
 def build_special_thanks(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
     html = SPECIAL_THANKS_TEMPLATE.read_text(encoding="utf-8")
     html = apply_interior_template_tokens(html)
@@ -393,6 +415,7 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
         page2_pdf = temp_dir / "page2.pdf"
         technical_details_pdf = temp_dir / "technical-details.pdf"
         special_thanks_pdf = temp_dir / "special-thanks.pdf"
+        contact_pdf = temp_dir / "contact.pdf"
         build_cover(
             version=version,
             output_path=cover_pdf,
@@ -410,6 +433,11 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
             playwright_python=playwright_python,
             verbose=verbose,
         )
+        build_contact(
+            output_path=contact_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
         run(
             [
                 "pdfunite",
@@ -417,6 +445,7 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
                 str(page2_pdf),
                 str(technical_details_pdf),
                 str(special_thanks_pdf),
+                str(contact_pdf),
                 str(output_path),
             ],
             stdout=None if verbose else subprocess.DEVNULL,
@@ -430,6 +459,7 @@ def output_path_for(target: str, output_dir: Path, *, artifact_version: int) -> 
         "cover": f"nst_wiki_cover_v{artifact_version}.pdf",
         "page2": f"nst_wiki_page2_v{artifact_version}.pdf",
         "technical-details": f"nst_wiki_technical_details_v{artifact_version}.pdf",
+        "contact": f"nst_wiki_contact_v{artifact_version}.pdf",
         "special-thanks": f"nst_wiki_special_thanks_v{artifact_version}.pdf",
         "pages-1-2": f"nst_wiki_v{artifact_version}.pdf",
         "pages-1-5": f"nst_wiki_v{artifact_version}.pdf",
@@ -451,15 +481,15 @@ def main() -> int:
     if target in PLANNED_TARGETS:
         print(f"Target '{target}' is planned but not implemented yet.")
         print(
-            "Implemented targets: cover, page2, technical-details, special-thanks, "
+            "Implemented targets: cover, page2, technical-details, contact, special-thanks, "
             "pages-1-2, pages-1-5, full-so-far"
         )
         return 2
 
-    if target not in {"cover", "page2", "technical-details", "special-thanks", "pages-1-2", "pages-1-5", "full-so-far"}:
+    if target not in {"cover", "page2", "technical-details", "contact", "special-thanks", "pages-1-2", "pages-1-5", "full-so-far"}:
         print(f"Unknown target: {target}", file=sys.stderr)
         print(
-            "Implemented targets: cover, page2, technical-details, special-thanks, "
+            "Implemented targets: cover, page2, technical-details, contact, special-thanks, "
             "pages-1-2, pages-1-5, full-so-far",
             file=sys.stderr,
         )
@@ -479,6 +509,12 @@ def main() -> int:
         build_page2(output_path=output_path, playwright_python=playwright_python, verbose=args.verbose)
     elif target == "technical-details":
         build_technical_details(
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=args.verbose,
+        )
+    elif target == "contact":
+        build_contact(
             output_path=output_path,
             playwright_python=playwright_python,
             verbose=args.verbose,

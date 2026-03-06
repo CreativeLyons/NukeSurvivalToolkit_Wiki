@@ -67,6 +67,7 @@ Current implemented targets:
 - `cover`
 - `page2`
 - `technical-details`
+- `contact`
 - `special-thanks`
 - `pages-1-2`
 - `pages-1-5`
