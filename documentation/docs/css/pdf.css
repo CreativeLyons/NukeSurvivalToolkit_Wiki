@@ -1,0 +1,64 @@
+/* PDF layout rules for mkdocs-with-pdf export */
+
+/* Enforce the same typography family used by the wiki theme. */
+html,
+body,
+article {
+  font-family: "Lato", sans-serif;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* Keep the first article on its page and default to article-level pagination. */
+article {
+  page-break-before: always;
+}
+
+article:first-of-type {
+  page-break-before: avoid;
+}
+
+/* Small pages can flow with previous content when the hook marks the article. */
+article:has(.pdf-small) {
+  page-break-before: auto;
+}
+
+/* Medium and large pages always start on a new page. */
+article:has(.pdf-medium),
+article:has(.pdf-large),
+article:has(.pdf-category-header) {
+  page-break-before: always;
+}
+
+/* Prevent media and headers from splitting awkwardly. */
+img {
+  page-break-inside: avoid;
+  max-width: 100%;
+  max-height: 62vh;
+  height: auto;
+  width: auto;
+  display: block;
+  margin: 0.5rem auto;
+}
+
+h2,
+h3 {
+  page-break-after: avoid;
+}
+
+/* Static replacement thumbnails for videos. */
+.pdf-video-thumb {
+  max-width: 480px;
+  margin: 1rem 0;
+}
+
+.pdf-video-thumb img {
+  width: 100%;
+  max-height: 52vh;
+  border-radius: 4px;
+}

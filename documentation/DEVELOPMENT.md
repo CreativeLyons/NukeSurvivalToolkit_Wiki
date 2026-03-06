@@ -38,6 +38,83 @@ cd documentation
 mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 ```
 
+## PDF Export Findings (2026-03-05)
+
+### Current state
+
+- The repo's strongest proven path is still the offline/local HTML build:
+  - `mkdocs build -f mkdocs.offline.yml`
+- The newer `mkdocs.pdf.yml` path can assemble the full merged HTML for PDF export, but WeasyPrint is not reliable as the final renderer for this document.
+
+### Verified renderer behavior
+
+- `mkdocs-with-pdf` + WeasyPrint can build a merged HTML document containing all later chapters and end matter.
+- The resulting WeasyPrint PDF truncates around `Draw/AutoFlare` in long renders.
+- The same merged HTML, when printed with Chrome/Playwright, includes the later pages that WeasyPrint drops.
+- `Google Chrome.app` and the `playwright` CLI are already available locally, so a browser-renderer path is viable without adding dependencies.
+
+### Important debugging conclusions
+
+- The truncation is not caused solely by:
+  - `documentation/docs/css/pdf.css`
+  - `documentation/hooks/pdf_preprocess.py`
+  - `draw/bokeh-builder.md` on its own
+  - `BokehBuilder` images
+- The `AutoFlare` page image is a confirmed trigger for the WeasyPrint truncation in the long combined document.
+- Removing only that image in a temp diagnostic build allowed `AutoFlare` text and `BokehBuilder` to appear.
+- Converting that image to PNG did not fix the issue, so the problem is not simply WebP format support.
+
+### Recommended export direction
+
+- Build local HTML with MkDocs first.
+- Render the final PDF with a browser engine (preferably Playwright using the Chrome channel).
+- Tune browser print CSS rather than continuing to chase WeasyPrint-specific layout failures.
+
+### Browser-renderer results now verified
+
+- `documentation/scripts/build_pdf.sh` now captures the merged HTML output and hands that HTML to a Playwright + Chrome renderer.
+- The first full browser-rendered build completed successfully on March 5, 2026.
+- Output file: `documentation/NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf`
+- Resulting browser-rendered PDF stats:
+  - 466 pages
+  - A4
+  - 164.6 MB
+- The browser-rendered PDF now includes:
+  - page 1 splash/cover image
+  - `AutoFlare` on page 44
+  - `BokehBuilder` on page 45
+  - final `About / Special Thanks / Contact` page at page 466
+- This confirms the renderer pivot fixed the truncation bug.
+- The cover-image sharpness issue was traced to `documentation/scripts/build_pdf.sh`, which was converting the splash image to a temp PNG at only `640px` width before render.
+- Keeping the temp cover asset at native source resolution allows the browser-rendered PDF to embed the cover image at `1280x720` instead of `640x360`, which materially improves sharpness.
+- The committed PDF cover asset now lives at `documentation/docs/img/pdf/NukeSurvivalToolkit_Splashpage_cover.jpg`.
+- Both `documentation/mkdocs.pdf.yml` and `documentation/scripts/build_pdf.sh` now use that JPEG cover asset for page 1 so the build no longer depends on regenerating the cover from the softer WebP source.
+- Remaining issues are now quality/pagination issues rather than completeness:
+  - page count is still far above the 305-page reference
+  - cover typography and footer placement still differ noticeably from v2.1.0
+  - shared-page behavior and whitespace need more tuning under browser print CSS
+
+### Operational notes
+
+- Treat `documentation/mkdocs.offline.yml` as the stable local HTML build config.
+- Rebuild and inspect HTML in a real browser before assuming a PDF problem is caused by markdown content.
+- Prefer temp directories for PDF diagnostics; do not generate fallback image assets into the repo.
+- Generated PDF test builds should remain local/temporary artifacts and should not be committed.
+- The tracked `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf` file is the original reference PDF, not a generated test iteration.
+
+### AI Handoff Files (2026-03-06)
+
+- Current handoff prompt for another agent:
+  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260306_HANDOFF.md`
+- Current factual status report:
+  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260306_STATUS_REPORT.md`
+
+Use those files as the first stop when handing this PDF work to another agent. They capture the current branch, the renderer pivot away from WeasyPrint, the user communication constraints, the current cover-only scope boundary, and the current best cover artifacts in `/tmp`.
+
+Current best cover artifacts at the time of this note:
+- `/tmp/nst-cover-realtemplate-33.pdf`
+- `/tmp/nst-cover-best-vs-ref-33.png`
+
 ### Common Validation Checks
 
 Build validation:

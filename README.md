@@ -57,9 +57,27 @@ Releases:
 
 <https://github.com/CreativeLyons/NukeSurvivalToolkit_Wiki/releases>
 
-## C. Offline Wiki (PDF Reference)
+## C. Offline PDF Build (Local, Not Versioned)
 
-For a simple offline reference version of the documentation, use the PDF:
+Requirements:
+
+- Google Chrome installed locally
+- A Python interpreter with `playwright` available
+- Python packages from `documentation/requirements-pdf.txt`
+- `pdftotext` available on `PATH`
+
+Build:
+
+```bash
+cd documentation
+./scripts/build_pdf.sh v2.2.0
+```
+
+The generated PDF is a local test/build artifact for inspection. It is intentionally ignored by git and should not be committed.
+
+## D. Offline Wiki (PDF Reference)
+
+For the original offline reference version of the documentation, use the PDF:
 
 - [NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf](documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf)
 

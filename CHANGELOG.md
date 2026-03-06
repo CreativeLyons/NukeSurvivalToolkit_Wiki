@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README banner image asset at `documentation/docs/img/nst-wiki-large.jpeg`.
 - Offline PDF reference asset at `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf`.
 - Local font assets under `documentation/docs/assets/fonts/` for Lato, JetBrains Mono, and Titillium Web.
+- PDF export source files for browser rendering under `documentation/mkdocs.pdf.yml`, `documentation/scripts/`, `documentation/templates/`, and `documentation/docs/css/`.
+- PDF cover source asset at `documentation/docs/img/pdf/NukeSurvivalToolkit_Splashpage_cover.jpg`.
+- Local Julius Sans One font asset at `documentation/docs/assets/fonts/julius-sans-one-400-normal-latin.ttf` for PDF cover typography.
 - 48 compressed local video thumbnails under `documentation/docs/img/video-thumbs/` generated from YouTube/Vimeo sources.
 - Offline build plugins (`offline`, `privacy`) in `documentation/mkdocs.offline.yml` to support local `file://` search and bundled external assets.
 
@@ -47,12 +50,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Split MkDocs configuration into online (`documentation/mkdocs.yml`) and offline (`documentation/mkdocs.offline.yml`) builds so GitHub Pages behavior remains unchanged while local ZIP behavior is optimized for `file://`.
 - Updated README and development docs with explicit online/offline build commands and offline ZIP entrypoint guidance (`site/index.html`).
 - Switched documentation fonts to local assets and disabled remote font loading for offline reliability.
+- Added browser-PDF build instructions while clarifying that generated PDF test outputs stay local and should not be committed.
+- Replaced the placeholder About page with project credits, acknowledgments, and contact links.
+- Updated the docs home page release label to `v2.2.0`.
 
 ### Fixed
 
 - Fixed offline `file://` search visibility and sidebar layout behavior by using an offline-specific MkDocs configuration (including disabled `navigation.instant` for offline builds).
 - Fixed offline video flicker by stabilizing render mode detection and preventing repeated embed/fallback re-renders.
 - Fixed broken fallback thumbnail rendering by replacing invalid placeholder-image dependencies with a resilient inline SVG fallback and a generated-thumbnail fallback chain.
+- Fixed long-form PDF export truncation after `AutoFlare` by rendering the merged HTML with Playwright + Chrome instead of relying on WeasyPrint's final PDF output.
+- Fixed PDF cover softness by using the committed JPEG cover source instead of regenerating a low-resolution temporary cover image.
 
 ### Removed
 

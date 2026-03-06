@@ -21,10 +21,12 @@ documentation/.cache/
 
 # Claude agent notes
 CLAUDE.md
+.claude/
 
 # PDF artifacts
 *.pdf
 !documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf
+documentation/scripts/content_analysis_report.md
 
 # Editor/IDE
 .vscode/
@@ -35,3 +37,6 @@ CLAUDE.md
 
 # New tools tracking
 .new_tools/
+
+# Repo-local AI handoff files
+.ai/

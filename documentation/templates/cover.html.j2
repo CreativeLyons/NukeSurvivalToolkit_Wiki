@@ -1,0 +1,32 @@
+{% set title_parts = cover_title.rsplit(' ', 1) %}
+<article id="doc-cover">
+    <div class="wrapper upper">
+        {% if cover_logo %}
+            <img
+                src="{{ cover_logo | to_url }}"
+                alt="{{ cover_title | e }}"
+                style="display:block;max-width:100%;margin:0 auto;object-fit:contain;"
+            />
+        {% endif %}
+    </div>
+    <div class="wrapper">
+        <h1>
+            <span>{{ title_parts[0] | e }}</span>
+            {% if title_parts | length > 1 %}
+                <span>{{ title_parts[1] | e }}</span>
+            {% endif %}
+        </h1>
+        <h2>{{ cover_subtitle | e }}</h2>
+    </div>
+    <div class="properties">
+        <address>
+            {% if author %}
+                <p id="author">{{ author | e }}</p>
+            {% endif %}
+            {% if copyright %}
+                <p id="copyright">{{ copyright | e }}</p>
+            {% endif %}
+            <p id="cover-page-number">1</p>
+        </address>
+    </div>
+</article>

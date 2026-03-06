@@ -1,0 +1,5 @@
+mkdocs-material
+mkdocs-with-pdf
+weasyprint
+beautifulsoup4
+playwright
