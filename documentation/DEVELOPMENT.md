@@ -47,7 +47,11 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - Current implemented targets:
   - `cover`
   - `page2`
+  - `technical-details`
+  - `special-thanks`
   - `pages-1-2`
+  - `pages-1-5`
+  - `full-so-far`
 - Output defaults to `/tmp/nst-wiki-pdf/`.
 - The reviewed combined artifact naming scheme is `nst_wiki_vN.pdf`.
 - The older `documentation/scripts/build_pdf.sh` path remains useful for full-book experiments, but the section-by-section workflow should be built out through `./make_wiki_pdf`.
@@ -60,6 +64,9 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - Page 2 is rendered from the dedicated template:
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/templates/page2.html`
 - The page 2 code block uses the repo-local JetBrains Mono asset and the replacement path string is intentionally red to warn users to change it.
+- Page 2 now acts as the source-of-truth interior shell for shared page margin, side padding, base typography, and link styling in the standalone interior-section templates.
+- Special Thanks uses that shared page 2 shell directly.
+- Technical Details uses the same shared page frame, while keeping denser content-specific typography so the fixed slice still fits reference pages 3-5.
 
 ### Current state
 
@@ -122,6 +129,7 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - Prefer temp directories for PDF diagnostics; do not generate fallback image assets into the repo.
 - Generated PDF test builds should remain local/temporary artifacts and should not be committed.
 - The tracked `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf` file is the original reference PDF, not a generated test iteration.
+- The current combined review target is `full-so-far`, which assembles cover, page 2, Technical Details, and Special Thanks into one local review PDF.
 
 ### AI Handoff Files (2026-03-06)
 

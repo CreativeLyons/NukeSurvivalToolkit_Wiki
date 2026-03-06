@@ -62,6 +62,16 @@ Releases:
 The main PDF entrypoint for this repo is the root-level Python script `./make_wiki_pdf`.
 Its purpose is to generate the printable PDF documentation from the wiki source, first as approved section builds and eventually as the complete assembled PDF book.
 
+Current implemented targets:
+
+- `cover`
+- `page2`
+- `technical-details`
+- `special-thanks`
+- `pages-1-2`
+- `pages-1-5`
+- `full-so-far`
+
 Requirements:
 
 - Google Chrome installed locally

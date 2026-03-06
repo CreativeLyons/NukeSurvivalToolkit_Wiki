@@ -31,7 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Offline PDF reference asset at `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf`.
 - Local font assets under `documentation/docs/assets/fonts/` for Lato, JetBrains Mono, and Titillium Web.
 - PDF export source files for browser rendering under `documentation/mkdocs.pdf.yml`, `documentation/scripts/`, `documentation/templates/`, and `documentation/docs/css/`.
-- Root-level `make_wiki_pdf` entrypoint for section-based local PDF builds, with current `cover`, `page2`, and `pages-1-2` targets and versioned review artifacts under `/tmp/nst-wiki-pdf/`.
+- Root-level `make_wiki_pdf` entrypoint for section-based local PDF builds, with current `cover`, `page2`, `technical-details`, `special-thanks`, `pages-1-2`, `pages-1-5`, and `full-so-far` targets plus versioned review artifacts under `/tmp/nst-wiki-pdf/`.
+- Dedicated PDF templates for the Technical Details and Special Thanks slices under `documentation/templates/`.
 - PDF cover source asset at `documentation/docs/img/pdf/NukeSurvivalToolkit_Splashpage_cover.jpg`.
 - Local Julius Sans One font asset at `documentation/docs/assets/fonts/julius-sans-one-400-normal-latin.ttf` for PDF cover typography.
 - 48 compressed local video thumbnails under `documentation/docs/img/video-thumbs/` generated from YouTube/Vimeo sources.
@@ -54,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added browser-PDF build instructions while clarifying that generated PDF test outputs stay local and should not be committed.
 - Shifted the active PDF workflow toward section-by-section approval through `make_wiki_pdf` instead of treating the full-book browser build path as the only entrypoint.
 - Replaced the placeholder About page with project credits, acknowledgments, and contact links.
+- Standardized the interior PDF page shell around the approved page 2 layout so page margin, side padding, base typography, and link styling are shared across the standalone interior-section templates.
 - Updated the docs home page release label to `v2.2.0`.
 
 ### Fixed
