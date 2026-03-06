@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>NST Page 2</title>
+<style>
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  src: url("__JETBRAINS_MONO_REGULAR_URI__") format("woff2");
+}
+
+/* Use the same @page margins as the approved page-2 pass so the
+   footer page number stays aligned with the locked cover positioning. */
+@page {
+  size: Letter;
+  margin: 16mm 10mm 12mm 10mm;
+}
+
+body {
+  margin: 0;
+  padding: 0 62px;
+  background: #fff;
+  color: #000;
+  font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+h1 {
+  margin: 0 0 0.4em 0;
+  color: #000;
+  font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  font-size: 26pt;
+  font-weight: 400;
+}
+
+h1:nth-of-type(2) {
+  margin-top: 1.4em;
+}
+
+p {
+  margin: 0 0 0.65em 0;
+}
+
+ol {
+  margin: 0.4em 0 0 1.2em;
+  padding: 0;
+}
+
+ol > li {
+  margin-bottom: 0.6em;
+}
+
+ol > li > p {
+  margin: 0.15em 0;
+}
+
+a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+code {
+  background: #efefef;
+  border-radius: 2px;
+  font-family: "JetBrains Mono", "Consolas", "Monaco", monospace;
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+}
+
+pre {
+  background: #eeeeee;
+  border-radius: 2px;
+  margin: 0.5em 0;
+  padding: 0.5em 0.8em;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+.py-module,
+.py-punct {
+  color: #24292f;
+}
+
+.py-func {
+  color: #8250df;
+}
+
+.py-string {
+  color: #c82829;
+}
+
+.toolbar-icon {
+  display: inline-block;
+  height: 32px;
+  margin-left: 4px;
+  vertical-align: middle;
+  width: 32px;
+}
+
+.page-number {
+  position: fixed;
+  right: 15.5mm;
+  bottom: 3.3mm;
+  transform: translate(0.7mm, 2.7mm);
+  color: #111;
+  font-family: "Helvetica", Arial, sans-serif;
+  font-size: 0.92rem;
+}
+</style>
+</head>
+<body>
+<h1>About</h1>
+
+<p>The Nuke Survival Toolkit is a portable tool menu for the Foundry's Nuke with a hand-picked selection of nuke gizmos collected from all over the web, organized into 1 easy-to-install toolbar.</p>
+
+<h1>Installation</h1>
+
+<p>Here's how to install and use the Nuke Survival Toolkit:</p>
+
+<ol>
+  <li>
+    <p>Download the .zip folder from the Nuke Survival Toolkit github website.</p>
+    <p><a href="https://github.com/CreativeLyons/NukeSurvivalToolkit_publicRelease/releases/latest">https://github.com/CreativeLyons/NukeSurvivalToolkit_publicRelease/releases/latest</a></p>
+    <p>This github will have all of the up to date changes, bug fixes, tweaks, additions, etc. So feel free to watch or star the github, and check back regularly if you'd like to stay up to date.</p>
+  </li>
+
+  <li>
+    <p>Copy or move the <code>NukeSurvivalToolkit</code> Folder either in your <code>User/.nuke/</code> folder for personal use, or for use in a pipeline or to share with multiple artists, place the folder in any shared and accessible network folder.</p>
+  </li>
+
+  <li>
+    <p>Open your <code>init.py</code> file in your <code>/.nuke/</code> folder into any text editor (or create a new init.py in your <code>User/.nuke/</code> directory if one doesn't already exist).</p>
+  </li>
+
+  <li>
+    <p>Copy the following code into your init.py file:</p>
+    <pre><code><span class="py-module">nuke</span><span class="py-punct">.</span><span class="py-func">pluginAddPath</span><span class="py-punct">(</span><span class="py-string">"Your/NukeSurvivalToolkit/FolderPath/Here"</span><span class="py-punct">)</span></code></pre>
+  </li>
+
+  <li>
+    <p>Copy the filepath location of where you placed your NukeSurvivalToolkit. Replace the <code>Your/NukeSurvivalToolkit/FolderPath/Here</code> text with the NukeSurvivalToolkit filepath location, making sure to keep quotation marks around the filepath.</p>
+  </li>
+
+  <li>
+    <p>Save your init.py file, and restart your Nuke session.</p>
+  </li>
+
+  <li>
+    <p>That's it! Congrats, you will now see a little red multi-tool in your nuke toolbar. <img class="toolbar-icon" src="__TOOLBAR_ICON_URI__" alt="toolbar icon" /></p>
+  </li>
+</ol>
+
+<div class="page-number">2</div>
+</body>
+</html>

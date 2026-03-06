@@ -40,6 +40,27 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 
 ## PDF Export Findings (2026-03-05)
 
+### Main entrypoint
+
+- The main repo-visible PDF entrypoint is `./make_wiki_pdf` at the repository root.
+- The script is intentionally target-based so each approved section can be rebuilt without touching the rest of the book.
+- Current implemented targets:
+  - `cover`
+  - `page2`
+  - `pages-1-2`
+- Output defaults to `/tmp/nst-wiki-pdf/`.
+- The reviewed combined artifact naming scheme is `nst_wiki_vN.pdf`.
+- The older `documentation/scripts/build_pdf.sh` path remains useful for full-book experiments, but the section-by-section workflow should be built out through `./make_wiki_pdf`.
+
+### Current approved slice
+
+- The current locked approved front-matter artifact is:
+  - `/tmp/nst-wiki-pdf/nst_wiki_v7.pdf`
+- It contains the approved cover plus the approved About + Installation page.
+- Page 2 is rendered from the dedicated template:
+  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/templates/page2.html`
+- The page 2 code block uses the repo-local JetBrains Mono asset and the replacement path string is intentionally red to warn users to change it.
+
 ### Current state
 
 - The repo's strongest proven path is still the offline/local HTML build:
@@ -109,11 +130,7 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - Current factual status report:
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260306_STATUS_REPORT.md`
 
-Use those files as the first stop when handing this PDF work to another agent. They capture the current branch, the renderer pivot away from WeasyPrint, the user communication constraints, the current cover-only scope boundary, and the current best cover artifacts in `/tmp`.
-
-Current best cover artifacts at the time of this note:
-- `/tmp/nst-cover-realtemplate-33.pdf`
-- `/tmp/nst-cover-best-vs-ref-33.png`
+Use those files as the first stop when handing this PDF work to another agent. They capture the current branch, the section-by-section `make_wiki_pdf` workflow, the user communication constraints, the locked page 1 + page 2 artifact, and the explicit boundary that Technical Details should not resume until the user says to continue.
 
 ### Common Validation Checks
 

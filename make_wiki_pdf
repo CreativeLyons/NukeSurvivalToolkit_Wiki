@@ -1,0 +1,335 @@
+#!/usr/bin/env python3
+"""Build approved NST wiki PDF slices as local review artifacts.
+
+Current implemented targets:
+- cover
+- page2
+- pages-1-2
+
+The script is intentionally target-based so each approved section can be
+rebuilt and locked independently before the later combined book pipeline.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+import yaml
+from bs4 import BeautifulSoup
+
+
+REPO_ROOT = Path(__file__).resolve().parent
+DOC_ROOT = REPO_ROOT / "documentation"
+MKDOCS_PDF_CONFIG = DOC_ROOT / "mkdocs.pdf.yml"
+PDF_BROWSER_CSS = DOC_ROOT / "docs" / "css" / "pdf-browser.css"
+COVER_IMAGE = DOC_ROOT / "docs" / "img" / "pdf" / "NukeSurvivalToolkit_Splashpage_cover.jpg"
+PAGE2_TEMPLATE = DOC_ROOT / "templates" / "page2.html"
+TOOLBAR_ICON = DOC_ROOT / "docs" / "img" / "NukeSurvivalToolkit_Documentation_v2.1.0.webp"
+JETBRAINS_MONO_REGULAR = DOC_ROOT / "docs" / "assets" / "fonts" / "jetbrains-mono-400-normal-latin.woff2"
+DEFAULT_VERSION = "v2.2.0"
+DEFAULT_OUTPUT_DIR = Path("/tmp/nst-wiki-pdf")
+PLANNED_TARGETS = (
+    "technical-details",
+    "menu",
+    "main-sections",
+    "tool-pages",
+    "full-wiki",
+)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Build approved NST wiki PDF slices as local review artifacts. "
+            "Currently implemented: cover, page2, pages-1-2."
+        )
+    )
+    parser.add_argument(
+        "target",
+        help=(
+            "Target to build. Implemented now: cover, page2, pages-1-2. "
+            "Planned later: technical-details, menu, main-sections, "
+            "tool-pages, full-wiki."
+        ),
+    )
+    parser.add_argument("--version", default=DEFAULT_VERSION, help="Release string for the cover subtitle.")
+    parser.add_argument(
+        "--artifact-version",
+        type=int,
+        default=1,
+        help="Version number embedded in the local review PDF filename.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=str(DEFAULT_OUTPUT_DIR),
+        help="Directory for local output PDFs. Defaults to /tmp/nst-wiki-pdf.",
+    )
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Open the output PDF after building.",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show underlying MkDocs and renderer command output.",
+    )
+    return parser.parse_args()
+
+
+def run(cmd: list[str], *, stdout=None, stderr=None, env: dict[str, str] | None = None) -> None:
+    subprocess.run(cmd, check=True, stdout=stdout, stderr=stderr, env=env)
+
+
+def find_playwright_python() -> str:
+    env_candidate = os.environ.get("PLAYWRIGHT_PYTHON")
+    candidates = []
+    if env_candidate:
+        candidates.append(env_candidate)
+    candidates.extend(
+        [
+            "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3",
+            shutil.which("python3") or "",
+        ]
+    )
+
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file():
+            result = subprocess.run(
+                [candidate, "-c", "import playwright"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            if result.returncode == 0:
+                return candidate
+
+    raise SystemExit(
+        "ERROR: no Python with Playwright available. Set PLAYWRIGHT_PYTHON to a working interpreter."
+    )
+
+
+def load_base_config() -> dict:
+    with MKDOCS_PDF_CONFIG.open("r", encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
+
+
+def write_target_config(target_dir: Path, *, version: str, nav: list[dict[str, str]]) -> Path:
+    config = load_base_config()
+    config["docs_dir"] = str((DOC_ROOT / "docs").resolve())
+    config["site_dir"] = str((DOC_ROOT / "site").resolve())
+    config["nav"] = nav
+    config["hooks"] = [str((DOC_ROOT / "hooks" / "pdf_preprocess.py").resolve())]
+
+    for plugin in config.get("plugins", []):
+        if isinstance(plugin, dict) and "with-pdf" in plugin:
+            pdf_config = plugin["with-pdf"]
+            pdf_config["enabled_if_env"] = "ENABLE_PDF_EXPORT"
+            pdf_config["cover_logo"] = str(COVER_IMAGE.resolve())
+            pdf_config["cover_subtitle"] = f"Release {version}"
+            pdf_config["custom_template_path"] = str((DOC_ROOT / "templates").resolve())
+            pdf_config["output_path"] = "browser-render-placeholder.pdf"
+            pdf_config["debug_html"] = True
+            break
+
+    config_path = target_dir / "mkdocs.target.yml"
+    with config_path.open("w", encoding="utf-8") as handle:
+        yaml.safe_dump(config, handle, sort_keys=False, allow_unicode=True)
+    return config_path
+
+
+def build_merged_html(target_dir: Path, *, version: str, nav: list[dict[str, str]], verbose: bool) -> Path:
+    config_path = write_target_config(target_dir, version=version, nav=nav)
+    html_path = target_dir / "merged-output.html"
+    env = os.environ.copy()
+    env["ENABLE_PDF_EXPORT"] = "1"
+    env["DYLD_LIBRARY_PATH"] = "/opt/homebrew/lib"
+    env["PKG_CONFIG_PATH"] = "/opt/homebrew/lib/pkgconfig"
+
+    with html_path.open("w", encoding="utf-8") as handle:
+        run(
+            ["mkdocs", "build", "-f", str(config_path)],
+            stdout=handle,
+            stderr=None if verbose else subprocess.DEVNULL,
+            env=env,
+        )
+
+    if not html_path.read_text(encoding="utf-8").lstrip().startswith("<html"):
+        raise SystemExit(f"ERROR: merged HTML capture failed at {html_path}")
+
+    run([sys.executable, str(DOC_ROOT / "scripts" / "prepare_browser_html.py"), "--html", str(html_path)])
+    return html_path
+
+
+def keep_articles(html_path: Path, *, keep_ids: set[str] | None = None, keep_urls: set[str] | None = None) -> None:
+    keep_ids = keep_ids or set()
+    keep_urls = keep_urls or set()
+
+    soup = BeautifulSoup(html_path.read_text(encoding="utf-8"), "html.parser")
+    body = soup.body
+    if body is None:
+        raise SystemExit(f"ERROR: no <body> found in merged HTML: {html_path}")
+
+    articles = body.find_all("article", recursive=False)
+    kept = []
+    for article in articles:
+        article_id = article.get("id", "")
+        article_url = article.get("data-url", "")
+        if article_id in keep_ids or article_url in keep_urls:
+            kept.append(article.extract())
+        else:
+            article.decompose()
+
+    if not kept:
+        raise SystemExit("ERROR: HTML slice removed every article.")
+
+    body.clear()
+    for article in kept:
+        body.append(article)
+
+    html_path.write_text(str(soup), encoding="utf-8")
+
+
+def render_html_to_pdf(
+    html_path: Path,
+    output_path: Path,
+    *,
+    css_path: Path,
+    playwright_python: str,
+    verbose: bool,
+) -> None:
+    run(
+        [
+            playwright_python,
+            str(DOC_ROOT / "scripts" / "render_browser_pdf.py"),
+            "--html",
+            str(html_path),
+            "--output",
+            str(output_path),
+            "--css",
+            str(css_path),
+        ],
+        stdout=None if verbose else subprocess.DEVNULL,
+        stderr=None if verbose else subprocess.DEVNULL,
+    )
+
+
+def build_cover(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-cover.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        html_path = build_merged_html(temp_dir, version=version, nav=[{"Home": "index.md"}], verbose=verbose)
+        keep_articles(html_path, keep_ids={"doc-cover"})
+        render_html_to_pdf(
+            html_path,
+            output_path,
+            css_path=PDF_BROWSER_CSS,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+    return output_path
+
+
+def build_page2(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+    html = PAGE2_TEMPLATE.read_text(encoding="utf-8")
+    html = html.replace("__TOOLBAR_ICON_URI__", TOOLBAR_ICON.resolve().as_uri())
+    html = html.replace("__JETBRAINS_MONO_REGULAR_URI__", JETBRAINS_MONO_REGULAR.resolve().as_uri())
+
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-page2.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        html_path = temp_dir / "page2.html"
+        css_path = temp_dir / "empty.css"
+        html_path.write_text(html, encoding="utf-8")
+        css_path.write_text("/* no-op */\n", encoding="utf-8")
+        render_html_to_pdf(
+            html_path,
+            output_path,
+            css_path=css_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+    return output_path
+
+
+def build_pages_1_2(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-pages12.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        cover_pdf = temp_dir / "cover.pdf"
+        page2_pdf = temp_dir / "page2.pdf"
+        build_cover(
+            version=version,
+            output_path=cover_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+        build_page2(output_path=page2_pdf, playwright_python=playwright_python, verbose=verbose)
+        run(
+            ["pdfunite", str(cover_pdf), str(page2_pdf), str(output_path)],
+            stdout=None if verbose else subprocess.DEVNULL,
+            stderr=None if verbose else subprocess.DEVNULL,
+        )
+    return output_path
+
+
+def output_path_for(target: str, output_dir: Path, *, artifact_version: int) -> Path:
+    filename = {
+        "cover": f"nst_wiki_cover_v{artifact_version}.pdf",
+        "page2": f"nst_wiki_page2_v{artifact_version}.pdf",
+        "pages-1-2": f"nst_wiki_v{artifact_version}.pdf",
+    }[target]
+    return output_dir / filename
+
+
+def open_pdf(path: Path) -> None:
+    run(["open", str(path)])
+
+
+def main() -> int:
+    args = parse_args()
+    target = args.target
+    output_dir = Path(args.output_dir).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if target in PLANNED_TARGETS:
+        print(f"Target '{target}' is planned but not implemented yet.")
+        print("Implemented targets: cover, page2, pages-1-2")
+        return 2
+
+    if target not in {"cover", "page2", "pages-1-2"}:
+        print(f"Unknown target: {target}", file=sys.stderr)
+        print("Implemented targets: cover, page2, pages-1-2", file=sys.stderr)
+        return 2
+
+    playwright_python = find_playwright_python()
+    output_path = output_path_for(target, output_dir, artifact_version=args.artifact_version)
+
+    if target == "cover":
+        build_cover(
+            version=args.version,
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=args.verbose,
+        )
+    elif target == "page2":
+        build_page2(output_path=output_path, playwright_python=playwright_python, verbose=args.verbose)
+    else:
+        build_pages_1_2(
+            version=args.version,
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=args.verbose,
+        )
+
+    print(output_path)
+    if args.open:
+        open_pdf(output_path)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

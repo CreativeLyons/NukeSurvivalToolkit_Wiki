@@ -59,6 +59,9 @@ Releases:
 
 ## C. Offline PDF Build (Local, Not Versioned)
 
+The main PDF entrypoint for this repo is the root-level Python script `./make_wiki_pdf`.
+Its purpose is to generate the printable PDF documentation from the wiki source, first as approved section builds and eventually as the complete assembled PDF book.
+
 Requirements:
 
 - Google Chrome installed locally
@@ -66,14 +69,7 @@ Requirements:
 - Python packages from `documentation/requirements-pdf.txt`
 - `pdftotext` available on `PATH`
 
-Build:
-
-```bash
-cd documentation
-./scripts/build_pdf.sh v2.2.0
-```
-
-The generated PDF is a local test/build artifact for inspection. It is intentionally ignored by git and should not be committed.
+Generated PDFs are local build artifacts for inspection and should not be committed.
 
 ## D. Offline Wiki (PDF Reference)
 
