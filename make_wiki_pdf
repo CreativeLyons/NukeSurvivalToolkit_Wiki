@@ -10,6 +10,7 @@ Current implemented targets:
 - pages-1-2
 - pages-1-5
 - full-so-far
+- menu
 
 The script is intentionally target-based so each approved section can be
 rebuilt and locked independently before the later combined book pipeline.
@@ -38,12 +39,16 @@ PAGE2_TEMPLATE = DOC_ROOT / "templates" / "page2.html"
 TECHNICAL_DETAILS_TEMPLATE = DOC_ROOT / "templates" / "technical_details.html"
 CONTACT_TEMPLATE = DOC_ROOT / "templates" / "contact.html"
 SPECIAL_THANKS_TEMPLATE = DOC_ROOT / "templates" / "special-thanks.html"
+MENU_TEMPLATE = DOC_ROOT / "templates" / "menu.html"
 TOOLBAR_ICON = DOC_ROOT / "docs" / "img" / "NukeSurvivalToolkit_Documentation_v2.1.0.webp"
+NST_MENU_IMAGE = DOC_ROOT / "docs" / "img" / "NSTMenus.webp"
+NUKEPEDIA_MENU_IMAGE = DOC_ROOT / "docs" / "img" / "NukepediaMenus.webp"
 JETBRAINS_MONO_REGULAR = DOC_ROOT / "docs" / "assets" / "fonts" / "jetbrains-mono-400-normal-latin.woff2"
 DEFAULT_VERSION = "v2.2.0"
 DEFAULT_OUTPUT_DIR = Path("/tmp/nst-wiki-pdf")
 INTERIOR_PAGE_MARGIN = "16mm 10mm 12mm 10mm"
 INTERIOR_TEXT_SIDE_PADDING = "62px"
+INTERIOR_FONT_FAMILY = '"Helvetica Neue", "Helvetica", "Arial", sans-serif'
 INTERIOR_TEXT_COLOR = "#000"
 INTERIOR_LINK_COLOR = "#0366d6"
 INTERIOR_LINK_DECORATION = "none"
@@ -52,8 +57,13 @@ INTERIOR_BASE_LINE_HEIGHT = "1.5"
 INTERIOR_H1_MARGIN = "0 0 0.4em 0"
 INTERIOR_H1_SIZE = "26pt"
 INTERIOR_PARAGRAPH_MARGIN = "0 0 0.65em 0"
+INTERIOR_PAGE_NUMBER_RIGHT = "15.5mm"
+INTERIOR_PAGE_NUMBER_BOTTOM = "3.3mm"
+INTERIOR_PAGE_NUMBER_TRANSFORM = "translate(0.7mm, 2.7mm)"
+INTERIOR_PAGE_NUMBER_COLOR = "#111"
+INTERIOR_PAGE_NUMBER_FONT_FAMILY = '"Helvetica", "Arial", sans-serif'
+INTERIOR_PAGE_NUMBER_FONT_SIZE = "0.92rem"
 PLANNED_TARGETS = (
-    "menu",
     "main-sections",
     "tool-pages",
     "full-wiki",
@@ -65,7 +75,7 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Build approved NST wiki PDF slices as local review artifacts. "
             "Currently implemented: cover, page2, technical-details, "
-            "contact, special-thanks, pages-1-2, pages-1-5, full-so-far."
+            "contact, special-thanks, pages-1-2, pages-1-5, full-so-far, menu."
         )
     )
     parser.add_argument(
@@ -73,8 +83,8 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Target to build. Implemented now: cover, page2, "
             "technical-details, contact, special-thanks, pages-1-2, "
-            "pages-1-5, full-so-far. "
-            "Planned later: menu, main-sections, "
+            "pages-1-5, full-so-far, menu. "
+            "Planned later: main-sections, "
             "tool-pages, full-wiki."
         ),
     )
@@ -111,6 +121,7 @@ def apply_interior_template_tokens(html: str) -> str:
     replacements = {
         "__INTERIOR_PAGE_MARGIN__": INTERIOR_PAGE_MARGIN,
         "__INTERIOR_TEXT_SIDE_PADDING__": INTERIOR_TEXT_SIDE_PADDING,
+        "__INTERIOR_FONT_FAMILY__": INTERIOR_FONT_FAMILY,
         "__INTERIOR_TEXT_COLOR__": INTERIOR_TEXT_COLOR,
         "__INTERIOR_LINK_COLOR__": INTERIOR_LINK_COLOR,
         "__INTERIOR_LINK_DECORATION__": INTERIOR_LINK_DECORATION,
@@ -119,6 +130,12 @@ def apply_interior_template_tokens(html: str) -> str:
         "__INTERIOR_H1_MARGIN__": INTERIOR_H1_MARGIN,
         "__INTERIOR_H1_SIZE__": INTERIOR_H1_SIZE,
         "__INTERIOR_PARAGRAPH_MARGIN__": INTERIOR_PARAGRAPH_MARGIN,
+        "__INTERIOR_PAGE_NUMBER_RIGHT__": INTERIOR_PAGE_NUMBER_RIGHT,
+        "__INTERIOR_PAGE_NUMBER_BOTTOM__": INTERIOR_PAGE_NUMBER_BOTTOM,
+        "__INTERIOR_PAGE_NUMBER_TRANSFORM__": INTERIOR_PAGE_NUMBER_TRANSFORM,
+        "__INTERIOR_PAGE_NUMBER_COLOR__": INTERIOR_PAGE_NUMBER_COLOR,
+        "__INTERIOR_PAGE_NUMBER_FONT_FAMILY__": INTERIOR_PAGE_NUMBER_FONT_FAMILY,
+        "__INTERIOR_PAGE_NUMBER_FONT_SIZE__": INTERIOR_PAGE_NUMBER_FONT_SIZE,
     }
     for placeholder, value in replacements.items():
         html = html.replace(placeholder, value)
@@ -356,6 +373,29 @@ def build_special_thanks(*, output_path: Path, playwright_python: str, verbose: 
     return output_path
 
 
+def build_menu(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+    html = MENU_TEMPLATE.read_text(encoding="utf-8")
+    html = html.replace("__NST_MENU_URI__", NST_MENU_IMAGE.resolve().as_uri())
+    html = html.replace("__NUKEPEDIA_MENU_URI__", NUKEPEDIA_MENU_IMAGE.resolve().as_uri())
+    html = html.replace("__JETBRAINS_MONO_REGULAR_URI__", JETBRAINS_MONO_REGULAR.resolve().as_uri())
+    html = apply_interior_template_tokens(html)
+
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-menu.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        html_path = temp_dir / "menu.html"
+        css_path = temp_dir / "empty.css"
+        html_path.write_text(html, encoding="utf-8")
+        css_path.write_text("/* no-op */\n", encoding="utf-8")
+        render_html_to_pdf(
+            html_path,
+            output_path,
+            css_path=css_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+    return output_path
+
+
 def build_pages_1_2(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
     with tempfile.TemporaryDirectory(prefix="nst-make-wiki-pages12.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
@@ -414,6 +454,7 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
         cover_pdf = temp_dir / "cover.pdf"
         page2_pdf = temp_dir / "page2.pdf"
         technical_details_pdf = temp_dir / "technical-details.pdf"
+        menu_pdf = temp_dir / "menu.pdf"
         special_thanks_pdf = temp_dir / "special-thanks.pdf"
         contact_pdf = temp_dir / "contact.pdf"
         build_cover(
@@ -428,6 +469,7 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
             playwright_python=playwright_python,
             verbose=verbose,
         )
+        build_menu(output_path=menu_pdf, playwright_python=playwright_python, verbose=verbose)
         build_special_thanks(
             output_path=special_thanks_pdf,
             playwright_python=playwright_python,
@@ -444,6 +486,7 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
                 str(cover_pdf),
                 str(page2_pdf),
                 str(technical_details_pdf),
+                str(menu_pdf),
                 str(special_thanks_pdf),
                 str(contact_pdf),
                 str(output_path),
@@ -464,6 +507,7 @@ def output_path_for(target: str, output_dir: Path, *, artifact_version: int) -> 
         "pages-1-2": f"nst_wiki_v{artifact_version}.pdf",
         "pages-1-5": f"nst_wiki_v{artifact_version}.pdf",
         "full-so-far": f"nst_wiki_v{artifact_version}.pdf",
+        "menu": f"nst_wiki_v{artifact_version}-menu.pdf",
     }[target]
     return output_dir / filename
 
@@ -482,15 +526,15 @@ def main() -> int:
         print(f"Target '{target}' is planned but not implemented yet.")
         print(
             "Implemented targets: cover, page2, technical-details, contact, special-thanks, "
-            "pages-1-2, pages-1-5, full-so-far"
+            "pages-1-2, pages-1-5, full-so-far, menu"
         )
         return 2
 
-    if target not in {"cover", "page2", "technical-details", "contact", "special-thanks", "pages-1-2", "pages-1-5", "full-so-far"}:
+    if target not in {"cover", "page2", "technical-details", "contact", "special-thanks", "pages-1-2", "pages-1-5", "full-so-far", "menu"}:
         print(f"Unknown target: {target}", file=sys.stderr)
         print(
             "Implemented targets: cover, page2, technical-details, contact, special-thanks, "
-            "pages-1-2, pages-1-5, full-so-far",
+            "pages-1-2, pages-1-5, full-so-far, menu",
             file=sys.stderr,
         )
         return 2
@@ -525,6 +569,8 @@ def main() -> int:
             playwright_python=playwright_python,
             verbose=args.verbose,
         )
+    elif target == "menu":
+        build_menu(output_path=output_path, playwright_python=playwright_python, verbose=args.verbose)
     elif target == "pages-1-2":
         build_pages_1_2(
             version=args.version,

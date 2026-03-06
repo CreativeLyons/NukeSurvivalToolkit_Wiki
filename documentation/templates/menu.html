@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>NST Menu Page</title>
+<style>
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  src: url("__JETBRAINS_MONO_REGULAR_URI__") format("woff2");
+}
+
+@page {
+  size: Letter;
+  margin: __INTERIOR_PAGE_MARGIN__;
+}
+
+body {
+  margin: 0;
+  padding: 0 __INTERIOR_TEXT_SIDE_PADDING__;
+  background: #fff;
+  color: __INTERIOR_TEXT_COLOR__;
+  font-family: __INTERIOR_FONT_FAMILY__;
+  font-size: __INTERIOR_BASE_FONT_SIZE__;
+  line-height: __INTERIOR_BASE_LINE_HEIGHT__;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+h1 {
+  margin: __INTERIOR_H1_MARGIN__;
+  color: __INTERIOR_TEXT_COLOR__;
+  font-family: __INTERIOR_FONT_FAMILY__;
+  font-size: __INTERIOR_H1_SIZE__;
+  font-weight: 400;
+}
+
+p {
+  margin: __INTERIOR_PARAGRAPH_MARGIN__;
+}
+
+code {
+  background: #efefef;
+  border-radius: 2px;
+  font-family: "JetBrains Mono", "Consolas", "Monaco", monospace;
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+}
+
+.intro {
+  max-width: 610px;
+  margin-bottom: 24px;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 258px 215px;
+  column-gap: 70px;
+  align-items: flex-start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.column.left {
+  width: 258px;
+}
+
+.column.right {
+  width: 215px;
+}
+
+.caption {
+  margin: 0 0 14px 0;
+  color: #111;
+  font-size: __INTERIOR_BASE_FONT_SIZE__;
+  line-height: 1.25;
+}
+
+.image-frame {
+  display: flex;
+  justify-content: center;
+}
+
+.column.right .image-frame {
+  justify-content: flex-start;
+}
+
+.image-frame img {
+  display: block;
+  height: auto;
+}
+
+.image-frame .nst-menu {
+  width: 258px;
+}
+
+.image-frame .nukepedia-menu {
+  width: 215px;
+}
+
+.page-number {
+  position: fixed;
+  right: __INTERIOR_PAGE_NUMBER_RIGHT__;
+  bottom: __INTERIOR_PAGE_NUMBER_BOTTOM__;
+  transform: __INTERIOR_PAGE_NUMBER_TRANSFORM__;
+  color: __INTERIOR_PAGE_NUMBER_COLOR__;
+  font-family: __INTERIOR_PAGE_NUMBER_FONT_FAMILY__;
+  font-size: __INTERIOR_PAGE_NUMBER_FONT_SIZE__;
+}
+</style>
+</head>
+<body>
+<main class="page">
+<h1>Menus</h1>
+
+<p class="intro">The tool menu&rsquo;s categorization is laid out in a bit of a mix between Nuke&rsquo;s original toolbar organization, and Nukepedia&rsquo;s gizmo categories. This should be helpful and intuitive when browsing for certain types of tools, or to quickly find the tool you are looking for if you forget the name. Some of these menus have sub-menus such as <code>Filter/Glows/</code> for further groupings to reduce the overall list size of each menu.</p>
+
+<section class="columns">
+  <div class="column left">
+    <p class="caption">Nuke Survival Toolkit Menu Bar:</p>
+    <div class="image-frame">
+      <img class="nst-menu" src="__NST_MENU_URI__" alt="Nuke Survival Toolkit Menu Bar" />
+    </div>
+  </div>
+
+  <div class="column right">
+    <p class="caption">Nukepedia&rsquo;s gizmo Categories</p>
+    <div class="image-frame">
+      <img class="nukepedia-menu" src="__NUKEPEDIA_MENU_URI__" alt="Nukepedia gizmo categories" />
+    </div>
+  </div>
+</section>
+
+<div class="page-number">6</div>
+</main>
+</body>
+</html>

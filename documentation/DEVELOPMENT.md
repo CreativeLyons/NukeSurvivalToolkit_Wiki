@@ -141,7 +141,11 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - Current factual status report:
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260306_STATUS_REPORT.md`
 
-Use those files as the first stop when handing this PDF work to another agent. They capture the current branch, the section-by-section `make_wiki_pdf` workflow, the user communication constraints, the locked page 1 + page 2 artifact, and the explicit boundary that Technical Details should not resume until the user says to continue.
+Use those files as the first stop when handing this PDF work to another agent. They capture the current branch, the section-based `make_wiki_pdf` workflow, the user communication constraints, the current exploratory state, and the current priority to move non-cover PDF content sourcing onto the wiki markdown files.
+
+Current takeover priority:
+- the non-cover slice pages in `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/make_wiki_pdf` are still sourcing content from standalone templates instead of from the wiki markdown in `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/docs/`
+- the next agent should fix markdown-driven content sourcing first, and only then continue layout tuning
 
 ### Common Validation Checks
 

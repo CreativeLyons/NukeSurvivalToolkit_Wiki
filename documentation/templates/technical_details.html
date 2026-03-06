@@ -22,9 +22,9 @@ body {
   padding: 0;
   background: #fff;
   color: __INTERIOR_TEXT_COLOR__;
-  font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
-  font-size: __INTERIOR_BASE_FONT_SIZE__;
-  line-height: __INTERIOR_BASE_LINE_HEIGHT__;
+  font-family: __INTERIOR_FONT_FAMILY__;
+  font-size: 10.55pt;
+  line-height: 1.33;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
@@ -38,7 +38,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 251.4mm;
-  padding: 0 __INTERIOR_TEXT_SIDE_PADDING__;
+  padding: 10px 54px 0 54px;
   position: relative;
   page-break-after: always;
 }
@@ -52,15 +52,15 @@ body {
 }
 
 h1 {
-  margin: __INTERIOR_H1_MARGIN__;
+  margin: 0 0 24px 0;
   color: __INTERIOR_TEXT_COLOR__;
-  font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
-  font-size: __INTERIOR_H1_SIZE__;
+  font-family: __INTERIOR_FONT_FAMILY__;
+  font-size: 24pt;
   font-weight: 400;
 }
 
 p {
-  margin: __INTERIOR_PARAGRAPH_MARGIN__;
+  margin: 0 0 0.62em 0;
 }
 
 .item,
@@ -128,13 +128,13 @@ p {
 }
 
 .page-number {
-  bottom: 3.3mm;
-  color: #111;
-  font-family: "Helvetica", "Arial", sans-serif;
-  font-size: 0.92rem;
+  bottom: __INTERIOR_PAGE_NUMBER_BOTTOM__;
+  color: __INTERIOR_PAGE_NUMBER_COLOR__;
+  font-family: __INTERIOR_PAGE_NUMBER_FONT_FAMILY__;
+  font-size: __INTERIOR_PAGE_NUMBER_FONT_SIZE__;
   position: absolute;
-  right: 15.5mm;
-  transform: translate(0.7mm, 2.7mm);
+  right: __INTERIOR_PAGE_NUMBER_RIGHT__;
+  transform: __INTERIOR_PAGE_NUMBER_TRANSFORM__;
 }
 </style>
 </head>
@@ -178,6 +178,8 @@ p {
       <div class="marker">2.)</div>
       <div class="content">
         <p>The <span class="mono">menu.py</span> in the main folder is primarily building almost the entire toolkit menu. You will find it organized into sections: Draw, Time, Color, Filter, etc. The tools will show up in the order that you designate them in this menu.</p>
+        <p>Because the <span class="mono">init.py</span> is loading downstream folders, any <span class="mono">menu.py</span> files located in another folder, will be loaded along with the main <span class="mono">menu.py</span>. This is happening with "Expression Nodes", "Hagbarth Tools" and "Xavier Martin's X_Tools" toolset menus. It was sometimes easier to group these tools together by artist and add them to <span class="mono">Draw/Expression AG</span>, <span class="mono">Draw/Hagbarth Tools</span>, or <span class="mono">Filter/X_Tools XM</span>.</p>
+        <p>These submenus are being added by the <span class="mono">menu.py</span> files in their artist's respective folder.</p>
       </div>
     </div>
 

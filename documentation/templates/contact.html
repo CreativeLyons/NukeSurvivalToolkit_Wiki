@@ -14,7 +14,7 @@ body {
   padding: 0 __INTERIOR_TEXT_SIDE_PADDING__;
   background: #fff;
   color: __INTERIOR_TEXT_COLOR__;
-  font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  font-family: __INTERIOR_FONT_FAMILY__;
   font-size: __INTERIOR_BASE_FONT_SIZE__;
   line-height: __INTERIOR_BASE_LINE_HEIGHT__;
   -webkit-print-color-adjust: exact;
@@ -29,7 +29,7 @@ a {
 h1 {
   margin: __INTERIOR_H1_MARGIN__;
   color: __INTERIOR_TEXT_COLOR__;
-  font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  font-family: __INTERIOR_FONT_FAMILY__;
   font-size: __INTERIOR_H1_SIZE__;
   font-weight: 400;
 }
@@ -40,12 +40,12 @@ p {
 
 .page-number {
   position: fixed;
-  right: 15.5mm;
-  bottom: 3.3mm;
-  transform: translate(0.7mm, 2.7mm);
-  color: #111;
-  font-family: "Helvetica", Arial, sans-serif;
-  font-size: 0.92rem;
+  right: __INTERIOR_PAGE_NUMBER_RIGHT__;
+  bottom: __INTERIOR_PAGE_NUMBER_BOTTOM__;
+  transform: __INTERIOR_PAGE_NUMBER_TRANSFORM__;
+  color: __INTERIOR_PAGE_NUMBER_COLOR__;
+  font-family: __INTERIOR_PAGE_NUMBER_FONT_FAMILY__;
+  font-size: __INTERIOR_PAGE_NUMBER_FONT_SIZE__;
 }
 </style>
 </head>

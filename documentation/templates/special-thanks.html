@@ -18,7 +18,7 @@ body {
 
 body {
   color: __INTERIOR_TEXT_COLOR__;
-  font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  font-family: __INTERIOR_FONT_FAMILY__;
   font-size: __INTERIOR_BASE_FONT_SIZE__;
   line-height: __INTERIOR_BASE_LINE_HEIGHT__;
   -webkit-print-color-adjust: exact;
@@ -77,10 +77,10 @@ p {
 .page-number {
   margin-top: auto;
   align-self: flex-end;
-  color: #111;
-  font-family: "Helvetica", "Arial", sans-serif;
-  font-size: 0.92rem;
-  transform: translate(0.7mm, 2.7mm);
+  color: __INTERIOR_PAGE_NUMBER_COLOR__;
+  font-family: __INTERIOR_PAGE_NUMBER_FONT_FAMILY__;
+  font-size: __INTERIOR_PAGE_NUMBER_FONT_SIZE__;
+  transform: __INTERIOR_PAGE_NUMBER_TRANSFORM__;
 }
 </style>
 </head>
