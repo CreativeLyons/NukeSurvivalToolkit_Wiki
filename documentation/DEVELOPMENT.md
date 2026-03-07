@@ -78,7 +78,7 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
   - `special-thanks` -> `documentation/docs/special-thanks.md`
   - `contact` -> `documentation/docs/contact.md`
 - Individual section targets are rendered contextually from the combined subset and then extracted back out, so the current local review pages keep a consistent sequence.
-- `About` is no longer part of the live nav; it stays on disk only as a small project-overview page that points to the standalone `special-thanks.md` and `contact.md` pages.
+- `About` is no longer part of the live nav, and the old `documentation/docs/about.md` page has been removed.
 - `technical-details` now paginates as flowing content inside the approved shell, using two invisible context pages so Chrome lays it out as if it begins on page 3 before the real pages are extracted back out.
 - Final visible page numbers are no longer trusted to template HTML. The finished PDFs are stamped afterward by:
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/scripts/stamp_pdf_page_numbers.py`
