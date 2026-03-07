@@ -223,7 +223,7 @@ article#doc-cover #copyright {
 }
 
 article#doc-cover #cover-page-number {
-  display: block !important;
+  display: none !important;
   font-size: 0.92rem !important;
   font-family: "Helvetica", Arial, sans-serif !important;
   color: #111 !important;

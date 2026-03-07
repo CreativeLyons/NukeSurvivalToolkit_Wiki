@@ -31,12 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Offline PDF reference asset at `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf`.
 - Local font assets under `documentation/docs/assets/fonts/` for Lato, JetBrains Mono, and Titillium Web.
 - PDF export source files for browser rendering under `documentation/mkdocs.pdf.yml`, `documentation/scripts/`, `documentation/templates/`, and `documentation/docs/css/`.
-- Root-level `make_wiki_pdf` entrypoint for section-based local PDF builds, with current `cover`, `page2`, `technical-details`, `contact`, `special-thanks`, `pages-1-2`, `pages-1-5`, and `full-so-far` targets plus versioned review artifacts under `/tmp/nst-wiki-pdf/`.
+- Root-level `make_wiki_pdf` entrypoint for section-based local PDF builds, with current `cover`, `page2`, `technical-details`, `menu`, `contact`, `special-thanks`, `pages-1-2`, `pages-1-5`, and `full-so-far` targets plus versioned review artifacts under `/tmp/nst-wiki-pdf/`.
 - Dedicated PDF templates for the Technical Details, Contact, and Special Thanks slices under `documentation/templates/`.
 - PDF cover source asset at `documentation/docs/img/pdf/NukeSurvivalToolkit_Splashpage_cover.jpg`.
 - Local Julius Sans One font asset at `documentation/docs/assets/fonts/julius-sans-one-400-normal-latin.ttf` for PDF cover typography.
 - 48 compressed local video thumbnails under `documentation/docs/img/video-thumbs/` generated from YouTube/Vimeo sources.
 - Offline build plugins (`offline`, `privacy`) in `documentation/mkdocs.offline.yml` to support local `file://` search and bundled external assets.
+- Standalone `documentation/docs/special-thanks.md` and `documentation/docs/contact.md` pages so those wiki sections can also be targeted directly in the PDF slice workflow.
+- `documentation/scripts/stamp_pdf_page_numbers.py` plus the `pypdf` dependency so the finished approved-subset PDFs can receive one consistent post-render page-number treatment.
 
 ### Changed
 
@@ -54,9 +56,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Switched documentation fonts to local assets and disabled remote font loading for offline reliability.
 - Added browser-PDF build instructions while clarifying that generated PDF test outputs stay local and should not be committed.
 - Shifted the active PDF workflow toward section-by-section approval through `make_wiki_pdf` instead of treating the full-book browser build path as the only entrypoint.
-- Replaced the placeholder About page with project credits, acknowledgments, and contact links.
-- Standardized the interior PDF page shell around the approved page 2 layout so page margin, side padding, base typography, and link styling are shared across the standalone interior-section templates.
-- Added a standalone Contact page template and appended it to the `full-so-far` PDF assembly so the current combined build now ends with the reference contact page.
+- Split the old combined About end matter into standalone `special-thanks.md` and `contact.md` wiki pages, and removed `About` from the live nav because it no longer carried meaningful standalone content.
+- Switched `make_wiki_pdf` content slices to a markdown-backed contextual build so `technical-details`, `menu`, `special-thanks`, and `contact` now render from the same source files as the wiki while preserving the approved PDF shell.
+- Updated `full-so-far` to build the current approved subset from those markdown-backed slices instead of stitching standalone content templates together.
+- Replaced per-template HTML footer numbering with one shared post-render PDF-numbering pass so the cover and all interior approved pages use the same visible number placement.
 - Updated the docs home page release label to `v2.2.0`.
 
 ### Fixed
@@ -66,6 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed broken fallback thumbnail rendering by replacing invalid placeholder-image dependencies with a resilient inline SVG fallback and a generated-thumbnail fallback chain.
 - Fixed long-form PDF export truncation after `AutoFlare` by rendering the merged HTML with Playwright + Chrome instead of relying on WeasyPrint's final PDF output.
 - Fixed PDF cover softness by using the committed JPEG cover source instead of regenerating a low-resolution temporary cover image.
+- Fixed inconsistent approved-subset page number placement by stamping the final PDFs after render instead of relying on template-specific HTML placement.
+- Fixed forced blank space in the `technical-details` review pages by allowing the markdown-derived content to paginate naturally before extracting the approved slice.
 
 ### Removed
 

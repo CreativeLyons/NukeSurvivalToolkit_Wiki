@@ -13,6 +13,7 @@ env/
 
 # MkDocs local build output
 site/
+.cache/
 documentation/site/
 documentation/.cache/
 

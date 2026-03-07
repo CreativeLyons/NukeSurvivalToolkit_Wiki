@@ -1,21 +1,9 @@
 # About
 
-## Special Thanks
+Nuke Survival Toolkit is curated and maintained by Tony Lyons as a portable, community-driven collection of useful Nuke tools. The wiki and the printable PDF are both built from the same markdown source so the documentation stays aligned across formats.
 
-Nuke Survival Toolkit exists because of the Nuke community. Thank you to everyone who shared tools, ideas, feedback, and support over the years. This project was built on the generosity of artists who publish useful work for others, and I am very grateful to everyone who helped make this toolkit possible.
+This project exists because artists share gizmos, scripts, tutorials, and hard-won practical knowledge with one another. The goal of the toolkit is to organize that work into a browsable, installable menu while keeping attribution visible and pointing people back to the original authors and sources whenever possible.
 
-Special thanks to Frank Rueter, Erwan Leroy, Xavier Martin, Mads Hagbarth Damsbo, Mark Joey Tang, Wouter Gilsing, Ben McEwan, SPIN VFX, Andrea Geremia, Alexey Kuchinski, Derek Rein, and Fynn Laue.
-
-Special acknowledgment to Adrian Pueyo for continued support and contributions to the Nuke community.
-
-Swiss Army Knife icon credit: [icons8.com](https://icons8.com).
-
-## Contact
-
-- Contact form: [creativelyons.com/contact](https://creativelyons.com/contact)
-- Portfolio: [CreativeLyons.com](https://creativelyons.com)
-- Blog: [CompositingMentor.com](https://compositingmentor.com)
-- GitHub repo: [NukeSurvivalToolkit](https://github.com/CreativeLyons/NukeSurvivalToolkit_publicRelease)
-- Wiki: [NukeSurvivalToolkit_Wiki](https://github.com/CreativeLyons/NukeSurvivalToolkit_Wiki)
+For contributor acknowledgments, see [Special Thanks](special-thanks.md). For support links and project contact details, see [Contact](contact.md).
 
 Tony Lyons | March 2026

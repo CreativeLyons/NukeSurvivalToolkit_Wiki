@@ -268,7 +268,8 @@ nav:
         - Advanced Keying Template Stamps: workflow-templates/advanced-keying-template-stamps.md
         - STMap Keyer Setup: workflow-templates/stmap-keyer-setup.md
         - Gizmo Demo Scripts: workflow-templates/gizmo-demo-scripts.md
-    - About: about.md
+    - Special Thanks: special-thanks.md
+    - Contact: contact.md
 
 theme:
     name: material

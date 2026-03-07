@@ -67,18 +67,23 @@ Current implemented targets:
 - `cover`
 - `page2`
 - `technical-details`
+- `menu`
 - `contact`
 - `special-thanks`
 - `pages-1-2`
 - `pages-1-5`
 - `full-so-far`
 
+The content-backed slice targets now render from the wiki markdown source (`techSpecs.md`, `menus.md`, `special-thanks.md`, `contact.md`) so the wiki and the printable subset builds stay aligned while preserving the approved PDF shell. `page2` remains a dedicated front-matter template.
+
+The finished review PDFs now receive page numbers in one final stamping pass, so the cover and interior pages share the same numbering position.
+
 Requirements:
 
 - Google Chrome installed locally
 - A Python interpreter with `playwright` available
-- Python packages from `documentation/requirements-pdf.txt`
-- `pdftotext` available on `PATH`
+- Python packages from `documentation/requirements-pdf.txt` (includes `pypdf` for final page-number stamping)
+- Poppler CLI tools `pdfinfo`, `pdfseparate`, and `pdfunite` available on `PATH`
 
 Generated PDFs are local build artifacts for inspection and should not be committed.
 

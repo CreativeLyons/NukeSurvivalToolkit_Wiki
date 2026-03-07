@@ -12,22 +12,25 @@ Current implemented targets:
 - full-so-far
 - menu
 
-The script is intentionally target-based so each approved section can be
-rebuilt and locked independently before the later combined book pipeline.
+The cover and page 2 keep their approved render path. The other implemented
+sections preserve the approved PDF shell while sourcing their content from the
+wiki markdown files under documentation/docs/.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import urlparse
 
+import markdown
+import shutil
 import yaml
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString, Tag
 
 
 REPO_ROOT = Path(__file__).resolve().parent
@@ -41,11 +44,14 @@ CONTACT_TEMPLATE = DOC_ROOT / "templates" / "contact.html"
 SPECIAL_THANKS_TEMPLATE = DOC_ROOT / "templates" / "special-thanks.html"
 MENU_TEMPLATE = DOC_ROOT / "templates" / "menu.html"
 TOOLBAR_ICON = DOC_ROOT / "docs" / "img" / "NukeSurvivalToolkit_Documentation_v2.1.0.webp"
-NST_MENU_IMAGE = DOC_ROOT / "docs" / "img" / "NSTMenus.webp"
-NUKEPEDIA_MENU_IMAGE = DOC_ROOT / "docs" / "img" / "NukepediaMenus.webp"
 JETBRAINS_MONO_REGULAR = DOC_ROOT / "docs" / "assets" / "fonts" / "jetbrains-mono-400-normal-latin.woff2"
+STAMP_PAGE_NUMBERS_SCRIPT = DOC_ROOT / "scripts" / "stamp_pdf_page_numbers.py"
 DEFAULT_VERSION = "v2.2.0"
 DEFAULT_OUTPUT_DIR = Path("/tmp/nst-wiki-pdf")
+TECHNICAL_DETAILS_DOC = DOC_ROOT / "docs" / "techSpecs.md"
+MENU_DOC = DOC_ROOT / "docs" / "menus.md"
+SPECIAL_THANKS_DOC = DOC_ROOT / "docs" / "special-thanks.md"
+CONTACT_DOC = DOC_ROOT / "docs" / "contact.md"
 INTERIOR_PAGE_MARGIN = "16mm 10mm 12mm 10mm"
 INTERIOR_TEXT_SIDE_PADDING = "62px"
 INTERIOR_FONT_FAMILY = '"Helvetica Neue", "Helvetica", "Arial", sans-serif'
@@ -63,11 +69,19 @@ INTERIOR_PAGE_NUMBER_TRANSFORM = "translate(0.7mm, 2.7mm)"
 INTERIOR_PAGE_NUMBER_COLOR = "#111"
 INTERIOR_PAGE_NUMBER_FONT_FAMILY = '"Helvetica", "Arial", sans-serif'
 INTERIOR_PAGE_NUMBER_FONT_SIZE = "0.92rem"
+STAMP_PAGE_NUMBER_FONT_NAME = "Helvetica"
+STAMP_PAGE_NUMBER_FONT_SIZE_PT = "11.04"
+STAMP_PAGE_NUMBER_RIGHT_GAP_PT = "33.0"
+STAMP_PAGE_NUMBER_BOTTOM_GAP_PT = "14.0"
 PLANNED_TARGETS = (
     "main-sections",
     "tool-pages",
     "full-wiki",
 )
+TECHNICAL_DETAILS_PAGE_START = 3
+TECHNICAL_DETAILS_CONTEXT_PAGES = TECHNICAL_DETAILS_PAGE_START - 1
+MENU_PAGE_COUNT = 1
+SPECIAL_THANKS_PAGE_COUNT = 2
 
 
 def parse_args() -> argparse.Namespace:
@@ -84,8 +98,7 @@ def parse_args() -> argparse.Namespace:
             "Target to build. Implemented now: cover, page2, "
             "technical-details, contact, special-thanks, pages-1-2, "
             "pages-1-5, full-so-far, menu. "
-            "Planned later: main-sections, "
-            "tool-pages, full-wiki."
+            "Planned later: main-sections, tool-pages, full-wiki."
         ),
     )
     parser.add_argument("--version", default=DEFAULT_VERSION, help="Release string for the cover subtitle.")
@@ -142,18 +155,23 @@ def apply_interior_template_tokens(html: str) -> str:
     return html
 
 
-def find_playwright_python() -> str:
-    env_candidate = os.environ.get("PLAYWRIGHT_PYTHON")
-    candidates = []
-    if env_candidate:
-        candidates.append(env_candidate)
-    candidates.extend(
-        [
-            "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3",
-            shutil.which("python3") or "",
-        ]
+def rendered_page2_html() -> str:
+    soup = template_soup(
+        PAGE2_TEMPLATE,
+        replacements={
+            "__TOOLBAR_ICON_URI__": TOOLBAR_ICON.resolve().as_uri(),
+            "__JETBRAINS_MONO_REGULAR_URI__": JETBRAINS_MONO_REGULAR.resolve().as_uri(),
+        },
     )
+    inject_margin_box_page_numbers(soup, page_numbers=(2,))
+    return str(soup)
 
+
+def find_playwright_python() -> str:
+    candidates = [
+        "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3",
+        shutil.which("python3") or "",
+    ]
     for candidate in candidates:
         if candidate and Path(candidate).is_file():
             result = subprocess.run(
@@ -164,10 +182,7 @@ def find_playwright_python() -> str:
             )
             if result.returncode == 0:
                 return candidate
-
-    raise SystemExit(
-        "ERROR: no Python with Playwright available. Set PLAYWRIGHT_PYTHON to a working interpreter."
-    )
+    raise SystemExit("ERROR: no Python with Playwright available.")
 
 
 def load_base_config() -> dict:
@@ -275,6 +290,206 @@ def render_html_to_pdf(
     )
 
 
+def render_standalone_html(
+    html: str,
+    *,
+    temp_prefix: str,
+    filename: str,
+    output_path: Path,
+    playwright_python: str,
+    verbose: bool,
+) -> Path:
+    with tempfile.TemporaryDirectory(prefix=temp_prefix) as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        html_path = temp_dir / filename
+        css_path = temp_dir / "empty.css"
+        html_path.write_text(html, encoding="utf-8")
+        css_path.write_text("/* no-op */\n", encoding="utf-8")
+        render_html_to_pdf(
+            html_path,
+            output_path,
+            css_path=css_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+    return output_path
+
+
+def stamp_page_numbers(
+    pdf_path: Path,
+    *,
+    first_page_index: int,
+    start_number: int,
+    last_page_index: int,
+    playwright_python: str,
+    verbose: bool,
+) -> Path:
+    if first_page_index > last_page_index:
+        return pdf_path
+
+    stamped_path = pdf_path.with_name(f"{pdf_path.stem}.stamped{pdf_path.suffix}")
+    run(
+        [
+            playwright_python,
+            str(STAMP_PAGE_NUMBERS_SCRIPT),
+            "--input",
+            str(pdf_path),
+            "--output",
+            str(stamped_path),
+            "--first-page-index",
+            str(first_page_index),
+            "--last-page-index",
+            str(last_page_index),
+            "--start-number",
+            str(start_number),
+            "--font-name",
+            STAMP_PAGE_NUMBER_FONT_NAME,
+            "--font-size-pt",
+            STAMP_PAGE_NUMBER_FONT_SIZE_PT,
+            "--right-gap-pt",
+            STAMP_PAGE_NUMBER_RIGHT_GAP_PT,
+            "--bottom-gap-pt",
+            STAMP_PAGE_NUMBER_BOTTOM_GAP_PT,
+        ],
+        stdout=None if verbose else subprocess.DEVNULL,
+        stderr=None if verbose else subprocess.DEVNULL,
+    )
+    stamped_path.replace(pdf_path)
+    return pdf_path
+
+
+def page_count(pdf_path: Path) -> int:
+    result = subprocess.run(
+        ["pdfinfo", str(pdf_path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    for line in result.stdout.splitlines():
+        if line.startswith("Pages:"):
+            return int(line.split(":", 1)[1].strip())
+    raise SystemExit(f"ERROR: could not determine page count for {pdf_path}")
+
+
+def extract_pdf_pages(
+    source_pdf: Path,
+    output_path: Path,
+    *,
+    start_page: int,
+    end_page: int,
+    verbose: bool,
+) -> Path:
+    if start_page > end_page:
+        raise SystemExit(f"ERROR: invalid extraction range {start_page}-{end_page} for {source_pdf}")
+
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-extract.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        page_pattern = temp_dir / "page-%03d.pdf"
+        run(
+            [
+                "pdfseparate",
+                "-f",
+                str(start_page),
+                "-l",
+                str(end_page),
+                str(source_pdf),
+                str(page_pattern),
+            ],
+            stdout=None if verbose else subprocess.DEVNULL,
+            stderr=None if verbose else subprocess.DEVNULL,
+        )
+
+        extracted_pages = sorted(temp_dir.glob("page-*.pdf"))
+        if not extracted_pages:
+            raise SystemExit(f"ERROR: pdfseparate did not extract any pages from {source_pdf}")
+
+        if len(extracted_pages) == 1:
+            shutil.copyfile(extracted_pages[0], output_path)
+            return output_path
+
+        run(
+            ["pdfunite", *[str(path) for path in extracted_pages], str(output_path)],
+            stdout=None if verbose else subprocess.DEVNULL,
+            stderr=None if verbose else subprocess.DEVNULL,
+        )
+    return output_path
+
+
+def menu_page_number_for(technical_details_pages: int) -> int:
+    return TECHNICAL_DETAILS_PAGE_START + technical_details_pages
+
+
+def special_thanks_page_numbers_for(technical_details_pages: int) -> tuple[int, int]:
+    start = menu_page_number_for(technical_details_pages) + MENU_PAGE_COUNT
+    return (start, start + 1)
+
+
+def contact_page_number_for(technical_details_pages: int) -> int:
+    return special_thanks_page_numbers_for(technical_details_pages)[0] + SPECIAL_THANKS_PAGE_COUNT
+
+
+def markdown_article(doc_path: Path) -> Tag:
+    html = markdown.markdown(doc_path.read_text(encoding="utf-8"), extensions=["tables"])
+    soup = BeautifulSoup(f"<article>{html}</article>", "html.parser")
+    article = soup.find("article")
+    if article is None:
+        raise SystemExit(f"ERROR: could not render markdown article for {doc_path}")
+
+    for img in article.find_all("img"):
+        src = img.get("src", "")
+        if src and not urlparse(src).scheme and not src.startswith("#"):
+            img["src"] = (doc_path.parent / src).resolve().as_uri()
+    return article
+
+
+def clone_tag(tag: Tag) -> Tag:
+    soup = BeautifulSoup(str(tag), "html.parser")
+    clone = next((node for node in soup.contents if isinstance(node, Tag)), None)
+    if clone is None:
+        raise SystemExit(f"ERROR: could not clone tag: {tag.name}")
+    return clone
+
+
+def strip_ids(tag: Tag) -> None:
+    for node in [tag, *tag.find_all(True)]:
+        node.attrs.pop("id", None)
+
+
+def append_html_fragment(parent: Tag, html: str) -> None:
+    fragment = BeautifulSoup(html, "html.parser")
+    for node in list(fragment.contents):
+        parent.append(node)
+
+
+def convert_code_to_mono(tag: Tag) -> None:
+    for code in tag.find_all("code"):
+        code.name = "span"
+        code["class"] = ["mono"]
+
+
+def template_soup(template_path: Path, *, replacements: dict[str, str] | None = None) -> BeautifulSoup:
+    html = template_path.read_text(encoding="utf-8")
+    if replacements:
+        for placeholder, value in replacements.items():
+            html = html.replace(placeholder, value)
+    html = apply_interior_template_tokens(html)
+    return BeautifulSoup(html, "html.parser")
+
+
+def inject_margin_box_page_numbers(soup: BeautifulSoup, *, page_numbers: tuple[int, ...]) -> None:
+    head = soup.head
+    if head is None:
+        raise SystemExit("ERROR: template has no <head> for page-number injection.")
+
+    style = soup.new_tag("style")
+    style.string = """
+.page-number {
+  display: none !important;
+}
+"""
+    head.append(style)
+
+
 def build_cover(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
     with tempfile.TemporaryDirectory(prefix="nst-make-wiki-cover.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
@@ -287,113 +502,461 @@ def build_cover(*, version: str, output_path: Path, playwright_python: str, verb
             playwright_python=playwright_python,
             verbose=verbose,
         )
-    return output_path
+    return stamp_page_numbers(
+        output_path,
+        first_page_index=1,
+        last_page_index=1,
+        start_number=1,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
 
 
 def build_page2(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
-    html = PAGE2_TEMPLATE.read_text(encoding="utf-8")
-    html = html.replace("__TOOLBAR_ICON_URI__", TOOLBAR_ICON.resolve().as_uri())
-    html = html.replace("__JETBRAINS_MONO_REGULAR_URI__", JETBRAINS_MONO_REGULAR.resolve().as_uri())
-    html = apply_interior_template_tokens(html)
+    render_standalone_html(
+        rendered_page2_html(),
+        temp_prefix="nst-make-wiki-page2.",
+        filename="page2.html",
+        output_path=output_path,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
+    return stamp_page_numbers(
+        output_path,
+        first_page_index=1,
+        last_page_index=1,
+        start_number=2,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
 
-    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-page2.") as temp_dir_str:
-        temp_dir = Path(temp_dir_str)
-        html_path = temp_dir / "page2.html"
-        css_path = temp_dir / "empty.css"
-        html_path.write_text(html, encoding="utf-8")
-        css_path.write_text("/* no-op */\n", encoding="utf-8")
-        render_html_to_pdf(
-            html_path,
-            output_path,
-            css_path=css_path,
-            playwright_python=playwright_python,
-            verbose=verbose,
-        )
-    return output_path
+
+def technical_nested_item(soup: BeautifulSoup, nested_li: Tag, nested_index: int, *, style: str) -> Tag:
+    wrapper = soup.new_tag("div", **{"class": "subitem" if style == "alpha" else "numeric-subitem"})
+    marker = soup.new_tag("div", **{"class": "submarker"})
+    marker.string = f"{chr(ord('a') + nested_index - 1)}.)" if style == "alpha" else f"{nested_index}.)"
+    content = soup.new_tag("div", **{"class": "subcontent"})
+    wrapper.append(marker)
+    wrapper.append(content)
+
+    has_block_children = any(
+        isinstance(child, Tag) and child.name in {"p", "ol", "ul"}
+        for child in nested_li.children
+    )
+    if not has_block_children:
+        paragraph = soup.new_tag("p")
+        append_html_fragment(paragraph, nested_li.decode_contents())
+        convert_code_to_mono(paragraph)
+        content.append(paragraph)
+        return wrapper
+
+    for child in [node for node in nested_li.children if isinstance(node, Tag)]:
+        if child.name == "p":
+            paragraph = clone_tag(child)
+            strip_ids(paragraph)
+            convert_code_to_mono(paragraph)
+            content.append(paragraph)
+        elif child.name in {"ol", "ul"}:
+            paragraph = soup.new_tag("p")
+            paragraph.string = child.get_text(" ", strip=True)
+            content.append(paragraph)
+        else:
+            block = clone_tag(child)
+            strip_ids(block)
+            convert_code_to_mono(block)
+            content.append(block)
+    return wrapper
+
+
+def technical_item(soup: BeautifulSoup, li: Tag, item_number: int) -> Tag:
+    item = soup.new_tag("div", **{"class": "item"})
+    marker = soup.new_tag("div", **{"class": "marker"})
+    marker.string = f"{item_number}.)"
+    content = soup.new_tag("div", **{"class": "content"})
+    item.append(marker)
+    item.append(content)
+
+    for child in [node for node in li.children if isinstance(node, Tag)]:
+        if child.name == "p":
+            paragraph = clone_tag(child)
+            strip_ids(paragraph)
+            convert_code_to_mono(paragraph)
+            content.append(paragraph)
+        elif child.name == "ol":
+            nested_style = "alpha" if item_number in {1, 4} else "numeric"
+            nested_items = child.find_all("li", recursive=False)
+            trailing_paragraph: Tag | None = None
+            if item_number == 4 and nested_items:
+                last_nested = nested_items[-1]
+                direct_paragraphs = last_nested.find_all("p", recursive=False)
+                if len(direct_paragraphs) > 1:
+                    trailing_paragraph = clone_tag(direct_paragraphs[-1])
+                    strip_ids(trailing_paragraph)
+                    convert_code_to_mono(trailing_paragraph)
+                    trailing_paragraph["class"] = ["tight"]
+                    direct_paragraphs[-1].extract()
+
+            for nested_index, nested_li in enumerate(nested_items, 1):
+                content.append(technical_nested_item(soup, nested_li, nested_index, style=nested_style))
+
+            if item_number == 1:
+                last_paragraph = next(
+                    (node for node in reversed(content.find_all("p", recursive=False))),
+                    None,
+                )
+                if last_paragraph is not None:
+                    last_paragraph["class"] = ["callout"]
+            if trailing_paragraph is not None:
+                content.append(trailing_paragraph)
+        else:
+            block = clone_tag(child)
+            strip_ids(block)
+            convert_code_to_mono(block)
+            content.append(block)
+
+    return item
+
+
+def technical_details_html() -> str:
+    article = markdown_article(TECHNICAL_DETAILS_DOC)
+    title = article.find("h1", recursive=False)
+    intro = article.find("p", recursive=False)
+    top_list = article.find("ol", recursive=False)
+    if title is None or intro is None or top_list is None:
+        raise SystemExit("ERROR: technical details markdown is missing required structure.")
+
+    items = top_list.find_all("li", recursive=False)
+    if len(items) != 9:
+        raise SystemExit(f"ERROR: expected 9 technical detail items, found {len(items)}.")
+
+    soup = template_soup(
+        TECHNICAL_DETAILS_TEMPLATE,
+        replacements={"__JETBRAINS_MONO_REGULAR_URI__": JETBRAINS_MONO_REGULAR.resolve().as_uri()},
+    )
+    body = soup.body
+    if body is None:
+        raise SystemExit("ERROR: technical details template has no <body>.")
+    body.clear()
+
+    flow_style = soup.new_tag("style")
+    flow_style.string = f"""
+.spacer-page {{
+  break-after: page;
+  page-break-after: always;
+  visibility: hidden;
+  height: 1px;
+}}
+
+.flow-main {{
+  padding: 10px 54px 0 54px;
+}}
+
+.flow-main .item,
+.flow-main .subitem,
+.flow-main .numeric-subitem {{
+  break-inside: avoid;
+  page-break-inside: avoid;
+}}
+"""
+    body.append(flow_style)
+
+    for _ in range(TECHNICAL_DETAILS_CONTEXT_PAGES):
+        spacer = soup.new_tag("div", **{"class": "spacer-page"})
+        spacer.string = "."
+        body.append(spacer)
+
+    flow_main = soup.new_tag("main", **{"class": "flow-main"})
+
+    title_clone = clone_tag(title)
+    strip_ids(title_clone)
+    flow_main.append(title_clone)
+
+    intro_clone = clone_tag(intro)
+    strip_ids(intro_clone)
+    flow_main.append(intro_clone)
+
+    for item_number, item_li in enumerate(items, 1):
+        flow_main.append(technical_item(soup, item_li, item_number))
+
+    body.append(flow_main)
+
+    return str(soup)
 
 
 def build_technical_details(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
-    html = TECHNICAL_DETAILS_TEMPLATE.read_text(encoding="utf-8")
-    html = html.replace("__JETBRAINS_MONO_REGULAR_URI__", JETBRAINS_MONO_REGULAR.resolve().as_uri())
-    html = apply_interior_template_tokens(html)
-
     with tempfile.TemporaryDirectory(prefix="nst-make-wiki-techdetails.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         html_path = temp_dir / "technical-details.html"
         css_path = temp_dir / "empty.css"
-        html_path.write_text(html, encoding="utf-8")
+        full_pdf = temp_dir / "technical-details-full.pdf"
+        html_path.write_text(technical_details_html(), encoding="utf-8")
         css_path.write_text("/* no-op */\n", encoding="utf-8")
         render_html_to_pdf(
             html_path,
-            output_path,
+            full_pdf,
             css_path=css_path,
             playwright_python=playwright_python,
             verbose=verbose,
         )
-    return output_path
+        total_pages = page_count(full_pdf)
+        extract_pdf_pages(
+            full_pdf,
+            output_path,
+            start_page=TECHNICAL_DETAILS_PAGE_START,
+            end_page=total_pages,
+            verbose=verbose,
+        )
+        stamped_last_page = total_pages - TECHNICAL_DETAILS_CONTEXT_PAGES
+        return stamp_page_numbers(
+            output_path,
+            first_page_index=1,
+            last_page_index=stamped_last_page,
+            start_number=TECHNICAL_DETAILS_PAGE_START,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
 
 
-def build_contact(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
-    html = CONTACT_TEMPLATE.read_text(encoding="utf-8")
-    html = apply_interior_template_tokens(html)
-
-    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-contact.") as temp_dir_str:
+def technical_details_page_count(*, playwright_python: str, verbose: bool) -> int:
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-techcount.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
-        html_path = temp_dir / "contact.html"
-        css_path = temp_dir / "empty.css"
-        html_path.write_text(html, encoding="utf-8")
-        css_path.write_text("/* no-op */\n", encoding="utf-8")
-        render_html_to_pdf(
-            html_path,
-            output_path,
-            css_path=css_path,
+        temp_pdf = temp_dir / "technical-details.pdf"
+        build_technical_details(
+            output_path=temp_pdf,
             playwright_python=playwright_python,
             verbose=verbose,
         )
-    return output_path
+        return page_count(temp_pdf)
 
 
-def build_special_thanks(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
-    html = SPECIAL_THANKS_TEMPLATE.read_text(encoding="utf-8")
-    html = apply_interior_template_tokens(html)
+def menu_html(*, page_number: int) -> str:
+    article = markdown_article(MENU_DOC)
+    title = article.find("h1", recursive=False)
+    intro = article.find("p", recursive=False)
+    table = article.find("table", recursive=False)
+    if title is None or intro is None or table is None:
+        raise SystemExit("ERROR: menu markdown is missing required structure.")
 
-    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-special-thanks.") as temp_dir_str:
-        temp_dir = Path(temp_dir_str)
-        html_path = temp_dir / "special-thanks.html"
-        css_path = temp_dir / "empty.css"
-        html_path.write_text(html, encoding="utf-8")
-        css_path.write_text("/* no-op */\n", encoding="utf-8")
-        render_html_to_pdf(
-            html_path,
-            output_path,
-            css_path=css_path,
-            playwright_python=playwright_python,
-            verbose=verbose,
+    headers = table.find_all("th")
+    cells = table.find_all("td")
+    if len(headers) != 2 or len(cells) != 2:
+        raise SystemExit("ERROR: menu markdown table must contain two columns.")
+
+    left_img = cells[0].find("img")
+    right_img = cells[1].find("img")
+    if left_img is None or right_img is None:
+        raise SystemExit("ERROR: menu markdown table must contain both images.")
+
+    soup = template_soup(
+        MENU_TEMPLATE,
+        replacements={
+            "__NST_MENU_URI__": left_img["src"],
+            "__NUKEPEDIA_MENU_URI__": right_img["src"],
+            "__JETBRAINS_MONO_REGULAR_URI__": JETBRAINS_MONO_REGULAR.resolve().as_uri(),
+        },
+    )
+
+    heading = soup.find("h1")
+    if heading is not None:
+        heading.string = title.get_text(strip=True)
+
+    intro_node = soup.find("p", class_="intro")
+    if intro_node is not None:
+        intro_node.clear()
+        append_html_fragment(intro_node, intro.decode_contents())
+
+    captions = soup.find_all("p", class_="caption")
+    if len(captions) == 2:
+        captions[0].string = headers[0].get_text(" ", strip=True)
+        captions[1].string = headers[1].get_text(" ", strip=True)
+
+    page_number_node = soup.find("div", class_="page-number")
+    if page_number_node is not None:
+        page_number_node.string = str(page_number)
+
+    inject_margin_box_page_numbers(soup, page_numbers=(page_number,))
+    return str(soup)
+
+
+def build_menu(*, output_path: Path, playwright_python: str, verbose: bool, page_number: int | None = None) -> Path:
+    if page_number is None:
+        page_number = menu_page_number_for(
+            technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
         )
-    return output_path
+    render_standalone_html(
+        menu_html(page_number=page_number),
+        temp_prefix="nst-make-wiki-menu.",
+        filename="menu.html",
+        output_path=output_path,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
+    return stamp_page_numbers(
+        output_path,
+        first_page_index=1,
+        last_page_index=1,
+        start_number=page_number,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
 
 
-def build_menu(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
-    html = MENU_TEMPLATE.read_text(encoding="utf-8")
-    html = html.replace("__NST_MENU_URI__", NST_MENU_IMAGE.resolve().as_uri())
-    html = html.replace("__NUKEPEDIA_MENU_URI__", NUKEPEDIA_MENU_IMAGE.resolve().as_uri())
-    html = html.replace("__JETBRAINS_MONO_REGULAR_URI__", JETBRAINS_MONO_REGULAR.resolve().as_uri())
-    html = apply_interior_template_tokens(html)
+def special_thanks_html(*, page_numbers: tuple[int, int]) -> str:
+    article = markdown_article(SPECIAL_THANKS_DOC)
+    children = [node for node in article.children if isinstance(node, Tag)]
+    if not children or children[0].name != "h1":
+        raise SystemExit("ERROR: special thanks markdown must start with an H1.")
 
-    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-menu.") as temp_dir_str:
-        temp_dir = Path(temp_dir_str)
-        html_path = temp_dir / "menu.html"
-        css_path = temp_dir / "empty.css"
-        html_path.write_text(html, encoding="utf-8")
-        css_path.write_text("/* no-op */\n", encoding="utf-8")
-        render_html_to_pdf(
-            html_path,
-            output_path,
-            css_path=css_path,
-            playwright_python=playwright_python,
-            verbose=verbose,
+    title = children[0]
+    contributors_heading_index = next(
+        (index for index, node in enumerate(children) if node.name == "h2"),
+        None,
+    )
+    if contributors_heading_index is None:
+        raise SystemExit("ERROR: special thanks markdown is missing the contributors heading.")
+
+    intro_paragraphs = children[1:contributors_heading_index]
+    tail = children[contributors_heading_index + 1 :]
+    if len(intro_paragraphs) != 4 or len(tail) < 6 or tail[1].name != "ul":
+        raise SystemExit("ERROR: special thanks markdown does not match the expected structure.")
+
+    contributors_intro = tail[0]
+    contributors_list = tail[1]
+    remaining_paragraphs = tail[2:]
+
+    soup = template_soup(SPECIAL_THANKS_TEMPLATE)
+    pages = soup.find_all("section", class_="page")
+    if len(pages) != 2:
+        raise SystemExit("ERROR: special thanks template must contain two pages.")
+
+    first_content = pages[0].find("div", class_="content")
+    second_content = pages[1].find("div", class_="content")
+    if first_content is None or second_content is None:
+        raise SystemExit("ERROR: special thanks template content containers are missing.")
+
+    first_content.clear()
+    title_clone = clone_tag(title)
+    strip_ids(title_clone)
+    first_content.append(title_clone)
+    for paragraph in intro_paragraphs:
+        paragraph_clone = clone_tag(paragraph)
+        strip_ids(paragraph_clone)
+        first_content.append(paragraph_clone)
+
+    second_content.clear()
+    intro_clone = clone_tag(contributors_intro)
+    strip_ids(intro_clone)
+    intro_clone["class"] = ["contributors-intro"]
+    second_content.append(intro_clone)
+
+    contributors = soup.new_tag("p", **{"class": "contributors"})
+    names = [li.get_text(" ", strip=True) for li in contributors_list.find_all("li", recursive=False)]
+    for index, name in enumerate(names):
+        strong = soup.new_tag("strong")
+        strong.string = name
+        contributors.append(strong)
+        contributors.append(soup.new_tag("br"))
+    contributors.append(NavigableString(remaining_paragraphs[0].get_text(" ", strip=True)))
+    second_content.append(contributors)
+
+    for paragraph in remaining_paragraphs[1:3]:
+        paragraph_clone = clone_tag(paragraph)
+        strip_ids(paragraph_clone)
+        second_content.append(paragraph_clone)
+
+    credit_clone = clone_tag(remaining_paragraphs[3])
+    strip_ids(credit_clone)
+    credit_clone["class"] = ["credit"]
+    second_content.append(credit_clone)
+
+    page_number_nodes = soup.find_all("div", class_="page-number")
+    if len(page_number_nodes) == 2:
+        page_number_nodes[0].string = str(page_numbers[0])
+        page_number_nodes[1].string = str(page_numbers[1])
+
+    inject_margin_box_page_numbers(soup, page_numbers=page_numbers)
+    return str(soup)
+
+
+def build_special_thanks(
+    *,
+    output_path: Path,
+    playwright_python: str,
+    verbose: bool,
+    page_numbers: tuple[int, int] | None = None,
+) -> Path:
+    if page_numbers is None:
+        page_numbers = special_thanks_page_numbers_for(
+            technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
         )
-    return output_path
+    render_standalone_html(
+        special_thanks_html(page_numbers=page_numbers),
+        temp_prefix="nst-make-wiki-special-thanks.",
+        filename="special-thanks.html",
+        output_path=output_path,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
+    return stamp_page_numbers(
+        output_path,
+        first_page_index=1,
+        last_page_index=2,
+        start_number=page_numbers[0],
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
+
+
+def contact_html(*, page_number: int) -> str:
+    article = markdown_article(CONTACT_DOC)
+    title = article.find("h1", recursive=False)
+    paragraphs = article.find_all("p", recursive=False)
+    if title is None or not paragraphs:
+        raise SystemExit("ERROR: contact markdown is missing required structure.")
+
+    soup = template_soup(CONTACT_TEMPLATE)
+    body = soup.body
+    if body is None:
+        raise SystemExit("ERROR: contact template has no <body>.")
+    body.clear()
+
+    title_clone = clone_tag(title)
+    strip_ids(title_clone)
+    body.append(title_clone)
+
+    for paragraph in paragraphs:
+        paragraph_clone = clone_tag(paragraph)
+        strip_ids(paragraph_clone)
+        body.append(paragraph_clone)
+
+    page_number_node = soup.new_tag("div", **{"class": "page-number"})
+    page_number_node.string = str(page_number)
+    body.append(page_number_node)
+    inject_margin_box_page_numbers(soup, page_numbers=(page_number,))
+    return str(soup)
+
+
+def build_contact(*, output_path: Path, playwright_python: str, verbose: bool, page_number: int | None = None) -> Path:
+    if page_number is None:
+        page_number = contact_page_number_for(
+            technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
+        )
+    render_standalone_html(
+        contact_html(page_number=page_number),
+        temp_prefix="nst-make-wiki-contact.",
+        filename="contact.html",
+        output_path=output_path,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
+    return stamp_page_numbers(
+        output_path,
+        first_page_index=1,
+        last_page_index=1,
+        start_number=page_number,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
 
 
 def build_pages_1_2(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
@@ -469,16 +1032,24 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
             playwright_python=playwright_python,
             verbose=verbose,
         )
-        build_menu(output_path=menu_pdf, playwright_python=playwright_python, verbose=verbose)
+        technical_pages = page_count(technical_details_pdf)
+        build_menu(
+            output_path=menu_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            page_number=menu_page_number_for(technical_pages),
+        )
         build_special_thanks(
             output_path=special_thanks_pdf,
             playwright_python=playwright_python,
             verbose=verbose,
+            page_numbers=special_thanks_page_numbers_for(technical_pages),
         )
         build_contact(
             output_path=contact_pdf,
             playwright_python=playwright_python,
             verbose=verbose,
+            page_number=contact_page_number_for(technical_pages),
         )
         run(
             [

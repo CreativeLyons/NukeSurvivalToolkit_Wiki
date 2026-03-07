@@ -35,7 +35,8 @@ The Nuke Survival Toolkit is a portable tool menu for the Foundry's Nuke with a 
 - [Installation Guide](installation.md) - How to install the toolkit
 - [Tech Specs](techSpecs.md) - Technical specifications and requirements
 - [Menu Overview](menus.md) - Understanding the toolkit menu structure
-- [About](about.md) - Credits and acknowledgments
+- [Special Thanks](special-thanks.md) - Community acknowledgments
+- [Contact](contact.md) - Support and project links
 
 ---
 
@@ -43,4 +44,4 @@ The Nuke Survival Toolkit is a portable tool menu for the Foundry's Nuke with a 
 
 The Nuke Survival Toolkit is a portable tool menu for the Foundry's Nuke with a hand-picked selection of nuke gizmos collected from all over the web, organized into 1 easy-to-install toolbar.
 
-For more information about the authors and contributors, see the [About](about.md) page.
+For more information about the project, see [Special Thanks](special-thanks.md) and [Contact](contact.md).

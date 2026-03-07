@@ -48,6 +48,7 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
   - `cover`
   - `page2`
   - `technical-details`
+  - `menu`
   - `contact`
   - `special-thanks`
   - `pages-1-2`
@@ -59,23 +60,42 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 
 ### Current approved slice
 
-- The current locked approved front-matter artifact is:
-  - `/tmp/nst-wiki-pdf/nst_wiki_v7.pdf`
-- It contains the approved cover plus the approved About + Installation page.
+- The current approved subset is built through `./make_wiki_pdf full-so-far`.
+- It assembles:
+  - `cover`
+  - `page2`
+  - `technical-details`
+  - `menu`
+  - `special-thanks`
+  - `contact`
 - Page 2 is rendered from the dedicated template:
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/templates/page2.html`
 - The page 2 code block uses the repo-local JetBrains Mono asset and the replacement path string is intentionally red to warn users to change it.
-- Page 2 now acts as the source-of-truth interior shell for shared page margin, side padding, base typography, and link styling in the standalone interior-section templates.
-- Contact is rendered from the dedicated template:
-  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/templates/contact.html`
-- Special Thanks uses that shared page 2 shell directly.
-- Technical Details uses the same shared page frame, while keeping denser content-specific typography so the fixed slice still fits reference pages 3-5.
+- Page 2 now acts as the source-of-truth front-matter shell.
+- The content slices after page 2 now build from the wiki markdown pages instead of standalone content templates:
+  - `technical-details` -> `documentation/docs/techSpecs.md`
+  - `menu` -> `documentation/docs/menus.md`
+  - `special-thanks` -> `documentation/docs/special-thanks.md`
+  - `contact` -> `documentation/docs/contact.md`
+- Individual section targets are rendered contextually from the combined subset and then extracted back out, so the current local review pages keep a consistent sequence.
+- `About` is no longer part of the live nav; it stays on disk only as a small project-overview page that points to the standalone `special-thanks.md` and `contact.md` pages.
+- `technical-details` now paginates as flowing content inside the approved shell, using two invisible context pages so Chrome lays it out as if it begins on page 3 before the real pages are extracted back out.
+- Final visible page numbers are no longer trusted to template HTML. The finished PDFs are stamped afterward by:
+  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/scripts/stamp_pdf_page_numbers.py`
+- The legacy cover HTML page number is hidden in:
+  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/docs/css/pdf-browser.css`
+- This means the cover and interior pages all share one post-render page-number position.
 
 ### Current state
 
 - The repo's strongest proven path is still the offline/local HTML build:
   - `mkdocs build -f mkdocs.offline.yml`
-- The newer `mkdocs.pdf.yml` path can assemble the full merged HTML for PDF export, but WeasyPrint is not reliable as the final renderer for this document.
+- `mkdocs.pdf.yml` is still useful as the merged-HTML source for PDF slice extraction, but WeasyPrint is not reliable as the final renderer for this document.
+- The current proven PDF path is:
+  - MkDocs merged HTML
+  - Playwright/Chrome render
+  - `pypdf` page-number stamping
+  - `pdfseparate` / `pdfunite` extraction and assembly
 
 ### Verified renderer behavior
 
@@ -128,11 +148,16 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 ### Operational notes
 
 - Treat `documentation/mkdocs.offline.yml` as the stable local HTML build config.
+- Run direct MkDocs offline commands from `documentation/` when possible so the privacy-plugin cache stays under `documentation/.cache/`; running those commands from the repo root can create an extra root `.cache/` directory.
 - Rebuild and inspect HTML in a real browser before assuming a PDF problem is caused by markdown content.
 - Prefer temp directories for PDF diagnostics; do not generate fallback image assets into the repo.
 - Generated PDF test builds should remain local/temporary artifacts and should not be committed.
 - The tracked `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf` file is the original reference PDF, not a generated test iteration.
-- The current combined review target is `full-so-far`, which assembles cover, page 2, Technical Details, Special Thanks, and Contact into one local review PDF.
+- The current combined review target is `full-so-far`, which assembles cover, page 2, Technical Details, Menus, Special Thanks, and Contact into one local review PDF.
+- `make_wiki_pdf` currently depends on:
+  - Playwright-capable Python
+  - `pypdf`
+  - Poppler CLI tools `pdfinfo`, `pdfseparate`, and `pdfunite`
 
 ### AI Handoff Files (2026-03-06)
 
@@ -141,11 +166,12 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - Current factual status report:
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260306_STATUS_REPORT.md`
 
-Use those files as the first stop when handing this PDF work to another agent. They capture the current branch, the section-based `make_wiki_pdf` workflow, the user communication constraints, the current exploratory state, and the current priority to move non-cover PDF content sourcing onto the wiki markdown files.
+Use those files as the first stop when handing this PDF work to another agent. They capture the current branch, the section-based `make_wiki_pdf` workflow, the user communication constraints, the current exploratory state, and the next PDF priorities after the markdown-backed content sourcing change.
 
 Current takeover priority:
-- the non-cover slice pages in `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/make_wiki_pdf` are still sourcing content from standalone templates instead of from the wiki markdown in `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/docs/`
-- the next agent should fix markdown-driven content sourcing first, and only then continue layout tuning
+- markdown-driven content sourcing is now in place for `technical-details`, `menu`, `special-thanks`, and `contact`
+- natural-flow technical-details pagination and universal post-stamped page numbering are now in place for the approved subset workflow
+- the next agent should extend the same approach to later section groups without changing the approved page shells
 
 ### Common Validation Checks
 

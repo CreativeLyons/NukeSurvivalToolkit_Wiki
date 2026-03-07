@@ -13,7 +13,11 @@ There are a few things about this menu that try and make it both easy and safe t
 
 
 
-2. The `menu.py` in the main folder is primarily building almost the entire toolkit menu.  You will find it organized into sections: `Draw, Time, Color, Filter`, etc.  The tools will show up in the order that you designate them in this menu.  
+2. The `menu.py` in the main folder is primarily building almost the entire toolkit menu.  You will find it organized into sections: `Draw, Time, Color, Filter`, etc.  The tools will show up in the order that you designate them in this menu.
+
+    Because the `init.py` is loading downstream folders, any `menu.py` files located in another folder, will be loaded along with the main `menu.py`.  This is happening with "Expression Nodes", "Hagbarth Tools" and "Xavier Martin's X_Tools" toolset menus.  It was sometimes easier to group these tools together by artist and add them to `Draw/Expression AG`, `Draw/Hagbarth Tools`, or `Filter/X_Tools XM`.
+
+    These submenus are being added by the `menu.py` files in their artist's respective folder.
 
 3. Nuke does not like to load multiple gizmo files with the same name.  Because the Nuke Survival Toolkit may be added into company pipelines that already have many gizmo’s being loaded in, I have given all .gizmo files their own prefix `“NST_”`.  This means all files should have a unique name to any file that would be already installed.  For example, if there was an `iBlur.gizmo` installed, the one in Nuke Survival Toolkit is named `NST_iBlur.gizmo`, so there should be no conflicts.  In the main menu.py at the top, there is a variable that you can replace if you choose to find/replace the `"NST_"` prefix to a custom one for all the gizmos.  You could do this with a renaming software or via the terminal for all gizmos with the `"NST_"` prefix.  If you change `"NST_"` to `"WOW_"` for example, just enter `"WOW_"` in this variable.  This might help if two different Nuke Survival Toolkits are being loaded at once, to keep them unique.
 
