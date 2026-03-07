@@ -81,8 +81,6 @@ PLANNED_TARGETS = (
 )
 TECHNICAL_DETAILS_PAGE_START = 3
 TECHNICAL_DETAILS_CONTEXT_PAGES = TECHNICAL_DETAILS_PAGE_START - 1
-MENU_PAGE_COUNT = 1
-SPECIAL_THANKS_PAGE_COUNT = 2
 
 
 def parse_args() -> argparse.Namespace:
@@ -404,17 +402,18 @@ def extract_pdf_pages(
     return output_path
 
 
-def menu_page_number_for(technical_details_pages: int) -> int:
-    return TECHNICAL_DETAILS_PAGE_START + technical_details_pages
-
-
-def special_thanks_page_numbers_for(technical_details_pages: int) -> tuple[int, int]:
-    start = menu_page_number_for(technical_details_pages) + MENU_PAGE_COUNT
-    return (start, start + 1)
-
-
-def contact_page_number_for(technical_details_pages: int) -> int:
-    return special_thanks_page_numbers_for(technical_details_pages)[0] + SPECIAL_THANKS_PAGE_COUNT
+def compute_page_sequence(
+    section_page_counts: dict[str, int],
+) -> dict[str, tuple[int, ...]]:
+    section_order = ["cover", "page2", "technical-details", "menu", "special-thanks", "contact"]
+    result: dict[str, tuple[int, ...]] = {}
+    current_page = 1
+    for section in section_order:
+        count = section_page_counts.get(section, 0)
+        if count > 0:
+            result[section] = tuple(range(current_page, current_page + count))
+            current_page += count
+    return result
 
 
 def markdown_article(doc_path: Path) -> Tag:
@@ -514,8 +513,8 @@ def style_page2_content(soup: BeautifulSoup, tag: Tag) -> None:
 def page2_html() -> str:
     article = markdown_article(INTRO_DOC)
     children = [node for node in article.children if isinstance(node, Tag)]
-    if len([node for node in children if node.name == "h1"]) < 2 or not any(node.name == "ol" for node in children):
-        raise SystemExit("ERROR: intro markdown is missing the expected About/Installation structure.")
+    if not children:
+        raise SystemExit("ERROR: intro markdown has no content.")
 
     soup = template_soup(
         PAGE2_TEMPLATE,
@@ -678,8 +677,8 @@ def technical_details_html() -> str:
         raise SystemExit("ERROR: technical details markdown is missing required structure.")
 
     items = top_list.find_all("li", recursive=False)
-    if len(items) != 9:
-        raise SystemExit(f"ERROR: expected 9 technical detail items, found {len(items)}.")
+    if not items:
+        raise SystemExit("ERROR: technical details ordered list contains no items.")
 
     soup = template_soup(
         TECHNICAL_DETAILS_TEMPLATE,
@@ -781,6 +780,36 @@ def technical_details_page_count(*, playwright_python: str, verbose: bool) -> in
         return page_count(temp_pdf)
 
 
+def menu_page_count(*, playwright_python: str, verbose: bool) -> int:
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-menucount.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        temp_pdf = temp_dir / "menu.pdf"
+        render_standalone_html(
+            menu_html(page_number=0),
+            temp_prefix="nst-make-wiki-menucount.",
+            filename="menu.html",
+            output_path=temp_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+        return page_count(temp_pdf)
+
+
+def special_thanks_page_count(*, playwright_python: str, verbose: bool) -> int:
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-stcount.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        temp_pdf = temp_dir / "special-thanks.pdf"
+        render_standalone_html(
+            special_thanks_html(page_numbers=(0, 1)),
+            temp_prefix="nst-make-wiki-stcount.",
+            filename="special-thanks.html",
+            output_path=temp_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+        return page_count(temp_pdf)
+
+
 def menu_html(*, page_number: int) -> str:
     article = markdown_article(MENU_DOC)
     title = article.find("h1", recursive=False)
@@ -791,19 +820,19 @@ def menu_html(*, page_number: int) -> str:
 
     headers = table.find_all("th")
     cells = table.find_all("td")
-    if len(headers) != 2 or len(cells) != 2:
-        raise SystemExit("ERROR: menu markdown table must contain two columns.")
+    cell_images = [cell.find("img") for cell in cells]
+    cell_images = [img for img in cell_images if img is not None]
+    if not cell_images:
+        raise SystemExit("ERROR: menu markdown table contains no images.")
 
-    left_img = cells[0].find("img")
-    right_img = cells[1].find("img")
-    if left_img is None or right_img is None:
-        raise SystemExit("ERROR: menu markdown table must contain both images.")
+    left_src = cell_images[0]["src"]
+    right_src = cell_images[1]["src"] if len(cell_images) >= 2 else left_src
 
     soup = template_soup(
         MENU_TEMPLATE,
         replacements={
-            "__NST_MENU_URI__": left_img["src"],
-            "__NUKEPEDIA_MENU_URI__": right_img["src"],
+            "__NST_MENU_URI__": left_src,
+            "__NUKEPEDIA_MENU_URI__": right_src,
             "__JETBRAINS_MONO_REGULAR_URI__": JETBRAINS_MONO_REGULAR.resolve().as_uri(),
         },
     )
@@ -818,9 +847,9 @@ def menu_html(*, page_number: int) -> str:
         append_html_fragment(intro_node, intro.decode_contents())
 
     captions = soup.find_all("p", class_="caption")
-    if len(captions) == 2:
-        captions[0].string = headers[0].get_text(" ", strip=True)
-        captions[1].string = headers[1].get_text(" ", strip=True)
+    for i, caption in enumerate(captions):
+        if i < len(headers):
+            caption.string = headers[i].get_text(" ", strip=True)
 
     page_number_node = soup.find("div", class_="page-number")
     if page_number_node is not None:
@@ -832,9 +861,9 @@ def menu_html(*, page_number: int) -> str:
 
 def build_menu(*, output_path: Path, playwright_python: str, verbose: bool, page_number: int | None = None) -> Path:
     if page_number is None:
-        page_number = menu_page_number_for(
-            technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
-        )
+        tech_pages = technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
+        seq = compute_page_sequence({"cover": 1, "page2": 1, "technical-details": tech_pages, "menu": 1})
+        page_number = seq["menu"][0]
     render_standalone_html(
         menu_html(page_number=page_number),
         temp_prefix="nst-make-wiki-menu.",
@@ -869,21 +898,22 @@ def special_thanks_html(*, page_numbers: tuple[int, int]) -> str:
 
     intro_paragraphs = children[1:contributors_heading_index]
     tail = children[contributors_heading_index + 1 :]
-    if len(intro_paragraphs) != 4 or len(tail) < 6 or tail[1].name != "ul":
-        raise SystemExit("ERROR: special thanks markdown does not match the expected structure.")
 
-    contributors_intro = tail[0]
-    contributors_list = tail[1]
-    remaining_paragraphs = tail[2:]
+    contributors_list = next((node for node in tail if node.name == "ul"), None)
+    if contributors_list is None:
+        raise SystemExit("ERROR: special thanks markdown is missing the contributors list.")
+    list_index = tail.index(contributors_list)
+    pre_list = tail[:list_index]
+    post_list = tail[list_index + 1 :]
 
     soup = template_soup(SPECIAL_THANKS_TEMPLATE)
     pages = soup.find_all("section", class_="page")
-    if len(pages) != 2:
-        raise SystemExit("ERROR: special thanks template must contain two pages.")
+    if not pages:
+        raise SystemExit("ERROR: special thanks template has no pages.")
 
     first_content = pages[0].find("div", class_="content")
-    second_content = pages[1].find("div", class_="content")
-    if first_content is None or second_content is None:
+    second_content = pages[1].find("div", class_="content") if len(pages) >= 2 else first_content
+    if first_content is None:
         raise SystemExit("ERROR: special thanks template content containers are missing.")
 
     first_content.clear()
@@ -896,10 +926,11 @@ def special_thanks_html(*, page_numbers: tuple[int, int]) -> str:
         first_content.append(paragraph_clone)
 
     second_content.clear()
-    intro_clone = clone_tag(contributors_intro)
-    strip_ids(intro_clone)
-    intro_clone["class"] = ["contributors-intro"]
-    second_content.append(intro_clone)
+    for node in pre_list:
+        node_clone = clone_tag(node)
+        strip_ids(node_clone)
+        node_clone["class"] = ["contributors-intro"]
+        second_content.append(node_clone)
 
     contributors = soup.new_tag("p", **{"class": "contributors"})
     names = [li.get_text(" ", strip=True) for li in contributors_list.find_all("li", recursive=False)]
@@ -908,18 +939,25 @@ def special_thanks_html(*, page_numbers: tuple[int, int]) -> str:
         strong.string = name
         contributors.append(strong)
         contributors.append(soup.new_tag("br"))
-    contributors.append(NavigableString(remaining_paragraphs[0].get_text(" ", strip=True)))
+    if post_list:
+        contributors.append(NavigableString(post_list[0].get_text(" ", strip=True)))
+        middle_paragraphs = post_list[1:-1] if len(post_list) > 1 else []
+        credit_node = post_list[-1] if len(post_list) > 1 else None
+    else:
+        middle_paragraphs = []
+        credit_node = None
     second_content.append(contributors)
 
-    for paragraph in remaining_paragraphs[1:3]:
+    for paragraph in middle_paragraphs:
         paragraph_clone = clone_tag(paragraph)
         strip_ids(paragraph_clone)
         second_content.append(paragraph_clone)
 
-    credit_clone = clone_tag(remaining_paragraphs[3])
-    strip_ids(credit_clone)
-    credit_clone["class"] = ["credit"]
-    second_content.append(credit_clone)
+    if credit_node is not None:
+        credit_clone = clone_tag(credit_node)
+        strip_ids(credit_clone)
+        credit_clone["class"] = ["credit"]
+        second_content.append(credit_clone)
 
     page_number_nodes = soup.find_all("div", class_="page-number")
     if len(page_number_nodes) == 2:
@@ -935,12 +973,17 @@ def build_special_thanks(
     output_path: Path,
     playwright_python: str,
     verbose: bool,
-    page_numbers: tuple[int, int] | None = None,
+    page_numbers: tuple[int, ...] | None = None,
 ) -> Path:
     if page_numbers is None:
-        page_numbers = special_thanks_page_numbers_for(
-            technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
-        )
+        tech_pages = technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
+        m_pages = menu_page_count(playwright_python=playwright_python, verbose=verbose)
+        st_pages = special_thanks_page_count(playwright_python=playwright_python, verbose=verbose)
+        seq = compute_page_sequence({
+            "cover": 1, "page2": 1, "technical-details": tech_pages,
+            "menu": m_pages, "special-thanks": st_pages,
+        })
+        page_numbers = seq["special-thanks"]
     render_standalone_html(
         special_thanks_html(page_numbers=page_numbers),
         temp_prefix="nst-make-wiki-special-thanks.",
@@ -952,7 +995,7 @@ def build_special_thanks(
     return stamp_page_numbers(
         output_path,
         first_page_index=1,
-        last_page_index=2,
+        last_page_index=len(page_numbers),
         start_number=page_numbers[0],
         playwright_python=playwright_python,
         verbose=verbose,
@@ -990,9 +1033,14 @@ def contact_html(*, page_number: int) -> str:
 
 def build_contact(*, output_path: Path, playwright_python: str, verbose: bool, page_number: int | None = None) -> Path:
     if page_number is None:
-        page_number = contact_page_number_for(
-            technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
-        )
+        tech_pages = technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
+        m_pages = menu_page_count(playwright_python=playwright_python, verbose=verbose)
+        st_pages = special_thanks_page_count(playwright_python=playwright_python, verbose=verbose)
+        seq = compute_page_sequence({
+            "cover": 1, "page2": 1, "technical-details": tech_pages,
+            "menu": m_pages, "special-thanks": st_pages, "contact": 1,
+        })
+        page_number = seq["contact"][0]
     render_standalone_html(
         contact_html(page_number=page_number),
         temp_prefix="nst-make-wiki-contact.",
@@ -1085,23 +1133,29 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
             verbose=verbose,
         )
         technical_pages = page_count(technical_details_pdf)
+        m_pages = menu_page_count(playwright_python=playwright_python, verbose=verbose)
+        st_pages = special_thanks_page_count(playwright_python=playwright_python, verbose=verbose)
+        seq = compute_page_sequence({
+            "cover": 1, "page2": 1, "technical-details": technical_pages,
+            "menu": m_pages, "special-thanks": st_pages, "contact": 1,
+        })
         build_menu(
             output_path=menu_pdf,
             playwright_python=playwright_python,
             verbose=verbose,
-            page_number=menu_page_number_for(technical_pages),
+            page_number=seq["menu"][0],
         )
         build_special_thanks(
             output_path=special_thanks_pdf,
             playwright_python=playwright_python,
             verbose=verbose,
-            page_numbers=special_thanks_page_numbers_for(technical_pages),
+            page_numbers=seq["special-thanks"],
         )
         build_contact(
             output_path=contact_pdf,
             playwright_python=playwright_python,
             verbose=verbose,
-            page_number=contact_page_number_for(technical_pages),
+            page_number=seq["contact"][0],
         )
         run(
             [
