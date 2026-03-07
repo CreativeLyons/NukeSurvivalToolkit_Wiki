@@ -1,0 +1,425 @@
+#!/usr/bin/env python3
+"""Build NST wiki tool-pages PDF from markdown source.
+
+Implemented targets:
+- tool-pages           All 246 tool pages, in nav order
+- tool-pages --category NAME   Single category (e.g. draw, filter, transform)
+
+Uses the same render pipeline as make_wiki_pdf:
+  MkDocs build → merged HTML → filter articles → Playwright → stamp page numbers
+
+Non-tool pages (Home, Intro, Tech Specs, Menus, Special Thanks, Contact) are
+excluded. Category index/nav pages are excluded. Tool pages flow naturally, with
+small tools sharing pages via the pdf-small CSS class (set by pdf_preprocess.py).
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+import shutil
+import yaml
+from bs4 import BeautifulSoup
+
+
+REPO_ROOT = Path(__file__).resolve().parent
+DOC_ROOT = REPO_ROOT / "documentation"
+MKDOCS_PDF_CONFIG = DOC_ROOT / "mkdocs.pdf.yml"
+PDF_BROWSER_CSS = DOC_ROOT / "docs" / "css" / "pdf-browser.css"
+COVER_IMAGE = DOC_ROOT / "docs" / "img" / "pdf" / "NukeSurvivalToolkit_Splashpage_cover.jpg"
+STAMP_PAGE_NUMBERS_SCRIPT = DOC_ROOT / "scripts" / "stamp_pdf_page_numbers.py"
+DEFAULT_VERSION = "v2.2.0"
+DEFAULT_OUTPUT_DIR = Path("/tmp/nst-wiki-pdf")
+
+STAMP_PAGE_NUMBER_FONT_NAME = "Helvetica"
+STAMP_PAGE_NUMBER_FONT_SIZE_PT = "11.04"
+STAMP_PAGE_NUMBER_RIGHT_GAP_PT = "33.0"
+STAMP_PAGE_NUMBER_BOTTOM_GAP_PT = "14.0"
+
+# Non-tool articles excluded from the tool-pages PDF.
+# data-url values as produced by mkdocs-with-pdf (leading /, trailing /).
+# Home page comes out as "/." so we match that separately.
+NON_TOOL_URLS = {
+    "/.",               # Home / index.md
+    "/intro/",
+    "/techSpecs/",
+    "/menus/",
+    "/special-thanks/",
+    "/contact/",
+}
+# mkdocs-with-pdf also inserts cover and TOC articles with special IDs.
+NON_TOOL_IDS = {"doc-cover", "doc-toc"}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Build NST wiki tool-pages PDF. "
+            "Target: tool-pages. "
+            "Use --category to limit to a single category."
+        )
+    )
+    parser.add_argument(
+        "target",
+        help="Target to build. Currently implemented: tool-pages",
+    )
+    parser.add_argument(
+        "--category",
+        default=None,
+        metavar="NAME",
+        help=(
+            "Render only one category (e.g. draw, filter, transform, 3d, cg). "
+            "Matches articles whose URL starts with NAME/."
+        ),
+    )
+    parser.add_argument(
+        "--version",
+        default=DEFAULT_VERSION,
+        help="Release string used in the MkDocs config (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--artifact-version",
+        type=int,
+        default=1,
+        help="Version number embedded in the output PDF filename.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=str(DEFAULT_OUTPUT_DIR),
+        help="Directory for output PDFs (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Open the output PDF after building.",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show underlying MkDocs and renderer command output.",
+    )
+    return parser.parse_args()
+
+
+def run(cmd: list[str], *, stdout=None, stderr=None, env: dict[str, str] | None = None) -> None:
+    subprocess.run(cmd, check=True, stdout=stdout, stderr=stderr, env=env)
+
+
+def find_playwright_python() -> str:
+    candidates = [
+        "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3",
+        shutil.which("python3") or "",
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file():
+            result = subprocess.run(
+                [candidate, "-c", "import playwright"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            if result.returncode == 0:
+                return candidate
+    raise SystemExit("ERROR: no Python with Playwright available.")
+
+
+def load_base_config() -> dict:
+    with MKDOCS_PDF_CONFIG.open("r", encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
+
+
+def write_target_config(target_dir: Path, *, version: str, nav: list) -> Path:
+    config = load_base_config()
+    config["docs_dir"] = str((DOC_ROOT / "docs").resolve())
+    config["site_dir"] = str((DOC_ROOT / "site").resolve())
+    config["nav"] = nav
+    config["hooks"] = [str((DOC_ROOT / "hooks" / "pdf_preprocess.py").resolve())]
+
+    for plugin in config.get("plugins", []):
+        if isinstance(plugin, dict) and "with-pdf" in plugin:
+            pdf_config = plugin["with-pdf"]
+            pdf_config["enabled_if_env"] = "ENABLE_PDF_EXPORT"
+            pdf_config["cover_logo"] = str(COVER_IMAGE.resolve())
+            pdf_config["cover_subtitle"] = f"Release {version}"
+            pdf_config["custom_template_path"] = str((DOC_ROOT / "templates").resolve())
+            pdf_config["output_path"] = "browser-render-placeholder.pdf"
+            pdf_config["debug_html"] = True
+            break
+
+    config_path = target_dir / "mkdocs.target.yml"
+    with config_path.open("w", encoding="utf-8") as handle:
+        yaml.safe_dump(config, handle, sort_keys=False, allow_unicode=True)
+    return config_path
+
+
+def build_merged_html(target_dir: Path, *, version: str, nav: list, verbose: bool) -> Path:
+    config_path = write_target_config(target_dir, version=version, nav=nav)
+    html_path = target_dir / "merged-output.html"
+    env = os.environ.copy()
+    env["ENABLE_PDF_EXPORT"] = "1"
+    env["DYLD_LIBRARY_PATH"] = "/opt/homebrew/lib"
+    env["PKG_CONFIG_PATH"] = "/opt/homebrew/lib/pkgconfig"
+
+    with html_path.open("w", encoding="utf-8") as handle:
+        run(
+            ["mkdocs", "build", "-f", str(config_path)],
+            stdout=handle,
+            stderr=None if verbose else subprocess.DEVNULL,
+            env=env,
+        )
+
+    if not html_path.read_text(encoding="utf-8").lstrip().startswith("<html"):
+        raise SystemExit(f"ERROR: merged HTML capture failed at {html_path}")
+
+    run([sys.executable, str(DOC_ROOT / "scripts" / "prepare_browser_html.py"), "--html", str(html_path)])
+    return html_path
+
+
+def render_html_to_pdf(
+    html_path: Path,
+    output_path: Path,
+    *,
+    css_path: Path,
+    playwright_python: str,
+    verbose: bool,
+) -> None:
+    run(
+        [
+            playwright_python,
+            str(DOC_ROOT / "scripts" / "render_browser_pdf.py"),
+            "--html",
+            str(html_path),
+            "--output",
+            str(output_path),
+            "--css",
+            str(css_path),
+        ],
+        stdout=None if verbose else subprocess.DEVNULL,
+        stderr=None if verbose else subprocess.DEVNULL,
+    )
+
+
+def stamp_page_numbers(
+    pdf_path: Path,
+    *,
+    first_page_index: int,
+    start_number: int,
+    last_page_index: int,
+    playwright_python: str,
+    verbose: bool,
+) -> Path:
+    if first_page_index > last_page_index:
+        return pdf_path
+
+    stamped_path = pdf_path.with_name(f"{pdf_path.stem}.stamped{pdf_path.suffix}")
+    run(
+        [
+            playwright_python,
+            str(STAMP_PAGE_NUMBERS_SCRIPT),
+            "--input",
+            str(pdf_path),
+            "--output",
+            str(stamped_path),
+            "--first-page-index",
+            str(first_page_index),
+            "--last-page-index",
+            str(last_page_index),
+            "--start-number",
+            str(start_number),
+            "--font-name",
+            STAMP_PAGE_NUMBER_FONT_NAME,
+            "--font-size-pt",
+            STAMP_PAGE_NUMBER_FONT_SIZE_PT,
+            "--right-gap-pt",
+            STAMP_PAGE_NUMBER_RIGHT_GAP_PT,
+            "--bottom-gap-pt",
+            STAMP_PAGE_NUMBER_BOTTOM_GAP_PT,
+        ],
+        stdout=None if verbose else subprocess.DEVNULL,
+        stderr=None if verbose else subprocess.DEVNULL,
+    )
+    stamped_path.replace(pdf_path)
+    return pdf_path
+
+
+def page_count(pdf_path: Path) -> int:
+    result = subprocess.run(
+        ["pdfinfo", str(pdf_path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    for line in result.stdout.splitlines():
+        if line.startswith("Pages:"):
+            return int(line.split(":", 1)[1].strip())
+    raise SystemExit(f"ERROR: could not determine page count for {pdf_path}")
+
+
+def load_full_nav() -> list:
+    """Read the full nav from mkdocs.pdf.yml."""
+    return load_base_config().get("nav", [])
+
+
+def remove_non_tool_articles(
+    html_path: Path,
+    *,
+    non_tool_urls: set[str] = NON_TOOL_URLS,
+    non_tool_ids: set[str] = NON_TOOL_IDS,
+) -> int:
+    """Remove front/back matter articles from the merged HTML in-place.
+
+    Removes:
+    - doc-cover and doc-toc articles (mkdocs-with-pdf special articles)
+    - Home, Intro, Tech Specs, Menus, Special Thanks, Contact pages
+    Returns the number of articles removed.
+    """
+    soup = BeautifulSoup(html_path.read_text(encoding="utf-8"), "html.parser")
+    body = soup.body
+    if body is None:
+        raise SystemExit("ERROR: no <body> in merged HTML")
+
+    removed = 0
+    for article in body.find_all("article", recursive=False):
+        article_id = article.get("id", "")
+        url = article.get("data-url", "")
+        if article_id in non_tool_ids or url in non_tool_urls:
+            article.decompose()
+            removed += 1
+
+    html_path.write_text(str(soup), encoding="utf-8")
+    return removed
+
+
+def filter_to_category(html_path: Path, category: str) -> int:
+    """Keep only the category article(s) whose tool sections match the given category.
+
+    In the merged HTML, each nav category is ONE <article> element (with a
+    hash-based id) containing one <section> per tool (each with data-url like
+    "/draw/constant-pro/"). This function keeps only the article(s) whose
+    sections match /{category}/.
+
+    Returns the number of tool sections kept.
+    """
+    prefix = f"/{category}/"
+    soup = BeautifulSoup(html_path.read_text(encoding="utf-8"), "html.parser")
+    body = soup.body
+    if body is None:
+        raise SystemExit("ERROR: no <body> in merged HTML")
+
+    kept = []
+    kept_count = 0
+    for article in body.find_all("article", recursive=False):
+        # Check if this article contains any tool sections for this category
+        sections = article.find_all("section", attrs={"data-url": True})
+        matching = [s for s in sections if s.get("data-url", "").startswith(prefix)]
+        if matching:
+            kept.append(article.extract())
+            kept_count += len(matching)
+        else:
+            article.decompose()
+
+    if not kept:
+        raise SystemExit(
+            f"ERROR: no tool articles found for category '{category}'. "
+            f"Check the slug matches the directory name in docs/ "
+            f"(e.g. draw, filter, transform, 3d, cg, curves, utilities, 3d)."
+        )
+
+    body.clear()
+    for article in kept:
+        body.append(article)
+
+    html_path.write_text(str(soup), encoding="utf-8")
+    return kept_count
+
+
+def build_tool_pages(
+    *,
+    category: str | None,
+    version: str,
+    output_path: Path,
+    playwright_python: str,
+    verbose: bool,
+) -> Path:
+    nav = load_full_nav()
+
+    with tempfile.TemporaryDirectory(prefix="nst-tool-pages.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+
+        print("Building merged HTML…")
+        html_path = build_merged_html(temp_dir, version=version, nav=nav, verbose=verbose)
+
+        print("Filtering articles…")
+        removed = remove_non_tool_articles(html_path)
+        print(f"  Removed {removed} non-tool article(s).")
+
+        if category:
+            kept = filter_to_category(html_path, category)
+            print(f"  Category '{category}': kept {kept} article(s).")
+
+        print("Rendering PDF…")
+        render_html_to_pdf(
+            html_path,
+            output_path,
+            css_path=PDF_BROWSER_CSS,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+
+    total = page_count(output_path)
+    print(f"Stamping page numbers (1–{total})…")
+    stamp_page_numbers(
+        output_path,
+        first_page_index=1,
+        last_page_index=total,
+        start_number=1,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
+    return output_path
+
+
+def output_path_for(output_dir: Path, *, artifact_version: int, category: str | None) -> Path:
+    cat_suffix = f"-{category}" if category else ""
+    return output_dir / f"nst_wiki_tool_pages{cat_suffix}_v{artifact_version}.pdf"
+
+
+def open_pdf(path: Path) -> None:
+    run(["open", str(path)])
+
+
+def main() -> int:
+    args = parse_args()
+    target = args.target
+
+    if target != "tool-pages":
+        print(f"Unknown target: '{target}'. Implemented targets: tool-pages", file=sys.stderr)
+        return 2
+
+    output_dir = Path(args.output_dir).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    playwright_python = find_playwright_python()
+    output_path = output_path_for(output_dir, artifact_version=args.artifact_version, category=args.category)
+
+    build_tool_pages(
+        category=args.category,
+        version=args.version,
+        output_path=output_path,
+        playwright_python=playwright_python,
+        verbose=args.verbose,
+    )
+
+    print(output_path)
+    if args.open:
+        open_pdf(output_path)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
