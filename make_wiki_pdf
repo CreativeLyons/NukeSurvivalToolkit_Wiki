@@ -12,7 +12,7 @@ Current implemented targets:
 - full-so-far
 - menu
 
-The cover and page 2 keep their approved render path. The other implemented
+The cover keeps its approved render path. Page 2 and the other implemented
 sections preserve the approved PDF shell while sourcing their content from the
 wiki markdown files under documentation/docs/.
 """
@@ -48,6 +48,7 @@ JETBRAINS_MONO_REGULAR = DOC_ROOT / "docs" / "assets" / "fonts" / "jetbrains-mon
 STAMP_PAGE_NUMBERS_SCRIPT = DOC_ROOT / "scripts" / "stamp_pdf_page_numbers.py"
 DEFAULT_VERSION = "v2.2.0"
 DEFAULT_OUTPUT_DIR = Path("/tmp/nst-wiki-pdf")
+INTRO_DOC = DOC_ROOT / "docs" / "intro.md"
 TECHNICAL_DETAILS_DOC = DOC_ROOT / "docs" / "techSpecs.md"
 MENU_DOC = DOC_ROOT / "docs" / "menus.md"
 SPECIAL_THANKS_DOC = DOC_ROOT / "docs" / "special-thanks.md"
@@ -153,18 +154,6 @@ def apply_interior_template_tokens(html: str) -> str:
     for placeholder, value in replacements.items():
         html = html.replace(placeholder, value)
     return html
-
-
-def rendered_page2_html() -> str:
-    soup = template_soup(
-        PAGE2_TEMPLATE,
-        replacements={
-            "__TOOLBAR_ICON_URI__": TOOLBAR_ICON.resolve().as_uri(),
-            "__JETBRAINS_MONO_REGULAR_URI__": JETBRAINS_MONO_REGULAR.resolve().as_uri(),
-        },
-    )
-    inject_margin_box_page_numbers(soup, page_numbers=(2,))
-    return str(soup)
 
 
 def find_playwright_python() -> str:
@@ -429,7 +418,7 @@ def contact_page_number_for(technical_details_pages: int) -> int:
 
 
 def markdown_article(doc_path: Path) -> Tag:
-    html = markdown.markdown(doc_path.read_text(encoding="utf-8"), extensions=["tables"])
+    html = markdown.markdown(doc_path.read_text(encoding="utf-8"), extensions=["tables", "fenced_code"])
     soup = BeautifulSoup(f"<article>{html}</article>", "html.parser")
     article = soup.find("article")
     if article is None:
@@ -490,6 +479,69 @@ def inject_margin_box_page_numbers(soup: BeautifulSoup, *, page_numbers: tuple[i
     head.append(style)
 
 
+def populate_page2_code_highlight(soup: BeautifulSoup, code: Tag) -> None:
+    if code.get_text(strip=True) != 'nuke.pluginAddPath("Your/NukeSurvivalToolkit/FolderPath/Here")':
+        return
+
+    code.clear()
+    code.attrs.pop("class", None)
+    tokens = (
+        ("py-module", "nuke"),
+        ("py-punct", "."),
+        ("py-func", "pluginAddPath"),
+        ("py-punct", "("),
+        ("py-string", '"Your/NukeSurvivalToolkit/FolderPath/Here"'),
+        ("py-punct", ")"),
+    )
+    for class_name, text in tokens:
+        span = soup.new_tag("span", **{"class": class_name})
+        span.string = text
+        code.append(span)
+
+
+def style_page2_content(soup: BeautifulSoup, tag: Tag) -> None:
+    for img in tag.find_all("img"):
+        classes = list(img.get("class", []))
+        if "toolbar-icon" not in classes:
+            classes.append("toolbar-icon")
+        img["class"] = classes
+
+    for code in tag.find_all("code"):
+        if code.parent is not None and code.parent.name == "pre":
+            populate_page2_code_highlight(soup, code)
+
+
+def page2_html() -> str:
+    article = markdown_article(INTRO_DOC)
+    children = [node for node in article.children if isinstance(node, Tag)]
+    if len([node for node in children if node.name == "h1"]) < 2 or not any(node.name == "ol" for node in children):
+        raise SystemExit("ERROR: intro markdown is missing the expected About/Installation structure.")
+
+    soup = template_soup(
+        PAGE2_TEMPLATE,
+        replacements={
+            "__TOOLBAR_ICON_URI__": TOOLBAR_ICON.resolve().as_uri(),
+            "__JETBRAINS_MONO_REGULAR_URI__": JETBRAINS_MONO_REGULAR.resolve().as_uri(),
+        },
+    )
+    body = soup.body
+    if body is None:
+        raise SystemExit("ERROR: page 2 template has no <body>.")
+    body.clear()
+
+    for child in children:
+        child_clone = clone_tag(child)
+        strip_ids(child_clone)
+        style_page2_content(soup, child_clone)
+        body.append(child_clone)
+
+    page_number_node = soup.new_tag("div", **{"class": "page-number"})
+    page_number_node.string = "2"
+    body.append(page_number_node)
+    inject_margin_box_page_numbers(soup, page_numbers=(2,))
+    return str(soup)
+
+
 def build_cover(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
     with tempfile.TemporaryDirectory(prefix="nst-make-wiki-cover.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
@@ -514,7 +566,7 @@ def build_cover(*, version: str, output_path: Path, playwright_python: str, verb
 
 def build_page2(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
     render_standalone_html(
-        rendered_page2_html(),
+        page2_html(),
         temp_prefix="nst-make-wiki-page2.",
         filename="page2.html",
         output_path=output_path,

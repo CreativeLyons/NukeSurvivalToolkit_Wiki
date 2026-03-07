@@ -229,7 +229,7 @@ def _classify_page(content: str, src_uri: str, title: str) -> str:
     if src_uri == "index.md":
         return "pdf-small"
 
-    if src_uri == "installation.md":
+    if src_uri == "intro.md":
         return "pdf-small"
 
     # Non-home index pages act as section landing pages and should force a break.
@@ -284,8 +284,8 @@ def _reshape_front_matter(content: str, src_uri: str) -> str:
     return str(soup)
 
 
-def _reshape_installation(content: str, src_uri: str) -> str:
-    if src_uri != "installation.md":
+def _reshape_intro(content: str, src_uri: str) -> str:
+    if src_uri != "intro.md":
         return content
 
     soup = BeautifulSoup(content, "html.parser")
@@ -306,7 +306,7 @@ def on_page_content(html_content, page, config, files):  # pylint: disable=unuse
         processed,
     )
     processed = _reshape_front_matter(processed, page.file.src_uri)
-    processed = _reshape_installation(processed, page.file.src_uri)
+    processed = _reshape_intro(processed, page.file.src_uri)
 
     page_class = _classify_page(processed, page.file.src_uri, getattr(page, "title", ""))
     return f'<div class="{page_class}">\n{processed}\n</div>'

@@ -27,7 +27,7 @@ hooks:
 
 nav:
     - Home: index.md
-    - Installation: installation.md
+    - Intro: intro.md
     - Tech Specs: techSpecs.md
     - Menus: menus.md
     - Image:

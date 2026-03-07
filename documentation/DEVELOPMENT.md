@@ -68,10 +68,11 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
   - `menu`
   - `special-thanks`
   - `contact`
-- Page 2 is rendered from the dedicated template:
+- Page 2 uses the dedicated approved shell template:
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/templates/page2.html`
 - The page 2 code block uses the repo-local JetBrains Mono asset and the replacement path string is intentionally red to warn users to change it.
-- Page 2 now acts as the source-of-truth front-matter shell.
+- Page 2 now acts as the source-of-truth front-matter shell, while its content comes from:
+  - `page2` -> `documentation/docs/intro.md`
 - The content slices after page 2 now build from the wiki markdown pages instead of standalone content templates:
   - `technical-details` -> `documentation/docs/techSpecs.md`
   - `menu` -> `documentation/docs/menus.md`

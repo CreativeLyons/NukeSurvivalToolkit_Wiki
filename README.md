@@ -74,7 +74,7 @@ Current implemented targets:
 - `pages-1-5`
 - `full-so-far`
 
-The content-backed slice targets now render from the wiki markdown source (`techSpecs.md`, `menus.md`, `special-thanks.md`, `contact.md`) so the wiki and the printable subset builds stay aligned while preserving the approved PDF shell. `page2` remains a dedicated front-matter template.
+The content-backed slice targets now render from the wiki markdown source (`intro.md`, `techSpecs.md`, `menus.md`, `special-thanks.md`, `contact.md`) so the wiki and the printable subset builds stay aligned while preserving the approved PDF shell. `page2` keeps its approved front-matter styling, but its content now comes from `intro.md`.
 
 The finished review PDFs now receive page numbers in one final stamping pass, so the cover and interior pages share the same numbering position.
 

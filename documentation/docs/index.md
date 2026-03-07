@@ -32,7 +32,7 @@ The Nuke Survival Toolkit is a portable tool menu for the Foundry's Nuke with a 
 
 ## Getting Started
 
-- [Installation Guide](installation.md) - How to install the toolkit
+- [Intro](intro.md) - About the toolkit and how to install it
 - [Tech Specs](techSpecs.md) - Technical specifications and requirements
 - [Menu Overview](menus.md) - Understanding the toolkit menu structure
 - [Special Thanks](special-thanks.md) - Community acknowledgments
