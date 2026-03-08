@@ -20,7 +20,7 @@ plugins:
       copyright: Tony Lyons | 2026
       toc_title: Tool Index
       toc_level: 3
-      ordered_chapter_level: 2
+      ordered_chapter_level: 0  # no numbers next to headers (match main wiki)
 
 hooks:
   - hooks/pdf_preprocess.py
