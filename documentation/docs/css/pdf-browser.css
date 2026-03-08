@@ -102,20 +102,10 @@ article:has(.pdf-category-header) {
   break-before: page !important;
 }
 
+/* Every tool starts on its own page. */
 section + section {
   min-height: auto !important;
   height: auto !important;
-  /* Small tools: allow flowing after previous content (page sharing). */
-  page-break-before: auto !important;
-  break-before: auto !important;
-}
-
-/* Medium and large tools always start on a fresh page.
-   Small tools (pdf-small) keep the default auto break so they can
-   share the remaining space on the previous tool's last page.
-   Only applies to tool-pages merged HTML; main wiki templates unaffected. */
-section + section:has(.pdf-medium),
-section + section:has(.pdf-large) {
   page-break-before: always !important;
   break-before: page !important;
 }
