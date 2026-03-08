@@ -61,7 +61,7 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Build NST wiki tool-pages PDF. "
             "Target: tool-pages. "
-            "Use --category to limit to a single category."
+            "Use --category to limit to one or more categories."
         )
     )
     parser.add_argument(
@@ -70,11 +70,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--category",
-        default=None,
+        action="append",
+        default=[],
         metavar="NAME",
         help=(
-            "Render only one category (e.g. draw, filter, transform, 3d, cg). "
-            "Matches articles whose URL starts with NAME/."
+            "Render only selected categories (e.g. --category image --category draw). "
+            "Also accepts comma-separated values inside one flag."
         ),
     )
     parser.add_argument(
@@ -265,6 +266,19 @@ def load_full_nav() -> list:
     return load_base_config().get("nav", [])
 
 
+def normalize_categories(raw_categories: list[str]) -> list[str]:
+    categories: list[str] = []
+    seen: set[str] = set()
+    for raw in raw_categories:
+        for part in raw.split(","):
+            category = part.strip().lower()
+            if not category or category in seen:
+                continue
+            categories.append(category)
+            seen.add(category)
+    return categories
+
+
 def remove_non_tool_articles(
     html_path: Path,
     *,
@@ -295,17 +309,17 @@ def remove_non_tool_articles(
     return removed
 
 
-def filter_to_category(html_path: Path, category: str) -> int:
-    """Keep only the category article(s) whose tool sections match the given category.
+def filter_to_categories(html_path: Path, categories: list[str]) -> int:
+    """Keep only the article(s) whose tool sections match the given categories.
 
     In the merged HTML, each nav category is ONE <article> element (with a
     hash-based id) containing one <section> per tool (each with data-url like
     "/draw/constant-pro/"). This function keeps only the article(s) whose
-    sections match /{category}/.
+    sections match one of the requested category prefixes.
 
     Returns the number of tool sections kept.
     """
-    prefix = f"/{category}/"
+    prefixes = tuple(f"/{category}/" for category in categories)
     soup = BeautifulSoup(html_path.read_text(encoding="utf-8"), "html.parser")
     body = soup.body
     if body is None:
@@ -316,7 +330,7 @@ def filter_to_category(html_path: Path, category: str) -> int:
     for article in body.find_all("article", recursive=False):
         # Check if this article contains any tool sections for this category
         sections = article.find_all("section", attrs={"data-url": True})
-        matching = [s for s in sections if s.get("data-url", "").startswith(prefix)]
+        matching = [s for s in sections if s.get("data-url", "").startswith(prefixes)]
         if matching:
             kept.append(article.extract())
             kept_count += len(matching)
@@ -325,7 +339,7 @@ def filter_to_category(html_path: Path, category: str) -> int:
 
     if not kept:
         raise SystemExit(
-            f"ERROR: no tool articles found for category '{category}'. "
+            f"ERROR: no tool articles found for categories {categories!r}. "
             f"Check the slug matches the directory name in docs/ "
             f"(e.g. draw, filter, transform, 3d, cg, curves, utilities, 3d)."
         )
@@ -340,7 +354,7 @@ def filter_to_category(html_path: Path, category: str) -> int:
 
 def build_tool_pages(
     *,
-    category: str | None,
+    categories: list[str],
     version: str,
     output_path: Path,
     playwright_python: str,
@@ -358,9 +372,10 @@ def build_tool_pages(
         removed = remove_non_tool_articles(html_path)
         print(f"  Removed {removed} non-tool article(s).")
 
-        if category:
-            kept = filter_to_category(html_path, category)
-            print(f"  Category '{category}': kept {kept} article(s).")
+        if categories:
+            kept = filter_to_categories(html_path, categories)
+            label = ", ".join(categories)
+            print(f"  Categories '{label}': kept {kept} article(s).")
 
         print("Rendering PDF…")
         render_html_to_pdf(
@@ -384,8 +399,8 @@ def build_tool_pages(
     return output_path
 
 
-def output_path_for(output_dir: Path, *, artifact_version: int, category: str | None) -> Path:
-    cat_suffix = f"-{category}" if category else ""
+def output_path_for(output_dir: Path, *, artifact_version: int, categories: list[str]) -> Path:
+    cat_suffix = f"-{'-'.join(categories)}" if categories else ""
     return output_dir / f"nst_wiki_tool_pages{cat_suffix}_v{artifact_version}.pdf"
 
 
@@ -405,10 +420,11 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     playwright_python = find_playwright_python()
-    output_path = output_path_for(output_dir, artifact_version=args.artifact_version, category=args.category)
+    categories = normalize_categories(args.category)
+    output_path = output_path_for(output_dir, artifact_version=args.artifact_version, categories=categories)
 
     build_tool_pages(
-        category=args.category,
+        categories=categories,
         version=args.version,
         output_path=output_path,
         playwright_python=playwright_python,
