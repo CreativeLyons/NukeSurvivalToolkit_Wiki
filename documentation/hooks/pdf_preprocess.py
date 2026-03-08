@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 from urllib.parse import quote
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 
 VIDEO_CONTAINER_RE = re.compile(
@@ -225,26 +225,41 @@ def _classify_page(content: str, src_uri: str, title: str) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     text_len = len(text)
     img_count = len(IMG_RE.findall(content))
+    classes: list[str] = []
 
     if src_uri == "index.md":
-        return "pdf-small"
+        classes.append("pdf-small")
+        return " ".join(classes)
 
     if src_uri == "intro.md":
-        return "pdf-small"
+        classes.append("pdf-small")
+        return " ".join(classes)
 
     # Non-home index pages act as section landing pages and should force a break.
     if src_uri.endswith("/index.md"):
-        return "pdf-category-header"
+        classes.append("pdf-category-header")
+        return " ".join(classes)
 
     # Calibrated against known v2.1.0 shared-page pairs.
     if title in KNOWN_SHARED_TOOL_TITLES:
-        return "pdf-small"
+        classes.append("pdf-small")
+    elif text_len < 600 and img_count <= 1:
+        classes.append("pdf-small")
+    elif text_len <= 2000 and img_count <= 2:
+        classes.append("pdf-medium")
+    else:
+        classes.append("pdf-large")
 
-    if text_len < 600 and img_count <= 1:
-        return "pdf-small"
-    if text_len <= 2000 and img_count <= 2:
-        return "pdf-medium"
-    return "pdf-large"
+    # Heuristic: pages with multiple images and light/medium text are the ones
+    # most likely to spill a final image onto an almost-empty trailing page.
+    # Add a compact class so CSS can shrink image blocks within reason.
+    if img_count >= 3:
+        classes.append("pdf-compact-images")
+        classes.append("pdf-compact-images-strong")
+    elif img_count == 2 and text_len <= 1800:
+        classes.append("pdf-compact-images")
+
+    return " ".join(classes)
 
 
 def _reshape_front_matter(content: str, src_uri: str) -> str:
@@ -294,6 +309,72 @@ def _reshape_intro(content: str, src_uri: str) -> str:
     return str(soup)
 
 
+def _is_standalone_image_block(node: Tag) -> bool:
+    if node.name not in {"p", "figure", "div"}:
+        return False
+
+    if node.name == "div":
+        classes = node.get("class", [])
+        return "pdf-video-thumb" in classes and len(node.find_all("img", recursive=False)) == 1
+
+    children = [child for child in node.children if isinstance(child, Tag)]
+    return len(children) == 1 and children[0].name == "img" and not node.get_text(" ", strip=True)
+
+
+def _compact_trailing_image_blocks(content: str) -> str:
+    soup = BeautifulSoup(content, "html.parser")
+    top_level_tags = [node for node in soup.contents if isinstance(node, Tag)]
+
+    trailing_blocks: list[Tag] = []
+    for node in reversed(top_level_tags):
+        if _is_standalone_image_block(node):
+            trailing_blocks.append(node)
+            continue
+        break
+
+    if len(trailing_blocks) == 1:
+        trailing = trailing_blocks[0]
+        classes = list(trailing.get("class", []))
+        if "pdf-single-trailing-image" not in classes:
+            classes.append("pdf-single-trailing-image")
+        trailing["class"] = classes
+        return str(soup)
+
+    if len(trailing_blocks) < 2:
+        return content
+
+    if len(trailing_blocks) == 2:
+        for node in trailing_blocks:
+            classes = list(node.get("class", []))
+            if "pdf-trailing-image-block" not in classes:
+                classes.append("pdf-trailing-image-block")
+            node["class"] = classes
+
+        first_trailing = trailing_blocks[-1]
+        first_classes = list(first_trailing.get("class", []))
+        if "pdf-trailing-image-block-first" not in first_classes:
+            first_classes.append("pdf-trailing-image-block-first")
+        first_trailing["class"] = first_classes
+        return str(soup)
+
+    # For 3+ trailing images, keep the overall visual size closer to normal,
+    # but tighten the run spacing and shrink only the first image block enough
+    # to reduce the large blank gap after the preceding text.
+    for node in trailing_blocks:
+        classes = list(node.get("class", []))
+        if "pdf-trailing-image-run" not in classes:
+            classes.append("pdf-trailing-image-run")
+        node["class"] = classes
+
+    first_trailing = trailing_blocks[-1]
+    first_classes = list(first_trailing.get("class", []))
+    if "pdf-trailing-image-run-first" not in first_classes:
+        first_classes.append("pdf-trailing-image-run-first")
+    first_trailing["class"] = first_classes
+
+    return str(soup)
+
+
 def on_page_content(html_content, page, config, files):  # pylint: disable=unused-argument
     docs_dir = str(config["docs_dir"])
 
@@ -307,6 +388,7 @@ def on_page_content(html_content, page, config, files):  # pylint: disable=unuse
     )
     processed = _reshape_front_matter(processed, page.file.src_uri)
     processed = _reshape_intro(processed, page.file.src_uri)
+    processed = _compact_trailing_image_blocks(processed)
 
     page_class = _classify_page(processed, page.file.src_uri, getattr(page, "title", ""))
     return f'<div class="{page_class}">\n{processed}\n</div>'

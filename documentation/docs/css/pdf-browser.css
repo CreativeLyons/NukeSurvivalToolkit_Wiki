@@ -249,11 +249,11 @@ article ol > li > p,
   margin: 0.15em 0 !important;
 }
 
-article img,
-.pdf-video-thumb img {
+section[data-url] img,
+section[data-url] .pdf-video-thumb img {
   display: block !important;
   max-width: 100% !important;
-  max-height: 58vh !important;
+  max-height: 56vh !important;
   width: auto !important;
   height: auto !important;
   margin: 0.5rem auto !important;
@@ -261,7 +261,76 @@ article img,
   break-inside: avoid !important;
 }
 
-article p:has(> img:only-child) {
+/* Standalone image blocks should use the full content width. */
+section[data-url] p:has(> img:only-child),
+section[data-url] .pdf-video-thumb {
+  width: 100% !important;
+}
+
+/* Compact multi-image pages so a final image is less likely to spill onto a
+   mostly blank trailing page. Roughly 75% of the default image height. */
+section[data-url].pdf-compact-images img,
+section[data-url].pdf-compact-images .pdf-video-thumb img {
+  max-height: 34vh !important;
+}
+
+/* Stronger compaction for very image-heavy pages. */
+section[data-url].pdf-compact-images-strong img,
+section[data-url].pdf-compact-images-strong .pdf-video-thumb img {
+  max-height: 31vh !important;
+}
+
+/* A single trailing screenshot after text should read large and can afford
+   a much looser height cap so it reaches closer to the text margins. */
+section[data-url] .pdf-single-trailing-image img,
+section[data-url] .pdf-single-trailing-image .pdf-video-thumb img {
+  max-height: 68vh !important;
+}
+
+/* Trailing image-only blocks after text are the most common source of
+   mostly blank pages. Pack those more tightly than normal images. */
+section[data-url] .pdf-trailing-image-block {
+  margin: 0.2rem auto 0.35rem !important;
+  text-align: center !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+section[data-url] .pdf-trailing-image-block-first {
+  margin-top: 0.15rem !important;
+}
+
+section[data-url] .pdf-trailing-image-block img,
+section[data-url] .pdf-trailing-image-block .pdf-video-thumb img {
+  max-height: 31vh !important;
+  margin: 0.15rem auto !important;
+}
+
+/* For 3+ trailing images, keep the stack close to its normal size but tighten
+   spacing and shrink only the first block enough to avoid a large blank gap
+   after the preceding text. */
+section[data-url] .pdf-trailing-image-run {
+  margin: 0.3rem auto 0.4rem !important;
+  text-align: center !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+section[data-url] .pdf-trailing-image-run img,
+section[data-url] .pdf-trailing-image-run .pdf-video-thumb img {
+  margin: 0.2rem auto !important;
+}
+
+section[data-url] .pdf-trailing-image-run-first {
+  margin-top: 0.15rem !important;
+}
+
+section[data-url] .pdf-trailing-image-run-first img,
+section[data-url] .pdf-trailing-image-run-first .pdf-video-thumb img {
+  max-height: 31vh !important;
+}
+
+section[data-url] p:has(> img:only-child) {
   text-align: center !important;
 }
 
