@@ -2,7 +2,7 @@
 
 **Author:** Mads Hagbarth Damsbo - [https://hagbarth.net/blog/](https://hagbarth.net/blog/)
 
-<div class="video-container" data-video-id="195532256" data-video-type="vimeo" data-thumbnail="../../img/video-placeholder.webp">
+<div class="video-container" data-video-id="195532256" data-video-type="vimeo" data-thumbnail="../../img/tools/draw/hagbarth/silk-195532256-thumb.webp">
 </div>
 
 <div class="video-container" data-video-id="195883171" data-video-type="vimeo" data-thumbnail="../img/tools/draw/hagbarth/silk-intro-thumb.webp">
