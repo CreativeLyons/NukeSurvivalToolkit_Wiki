@@ -330,7 +330,9 @@ def _compact_trailing_image_blocks(content: str) -> str:
             node.insert_before(separator)
         previous_was_image = current_is_image
 
-    # Preserve the useful single-trailing-image case for large lone screenshots.
+    # Preserve the useful single-trailing-image case for large lone screenshots,
+    # and also tag the final block of any trailing image run so the renderer can
+    # try the same fit-if-possible logic there too.
     refreshed_tags = [node for node in soup.contents if isinstance(node, Tag)]
     trailing_blocks: list[Tag] = []
     for node in reversed(refreshed_tags):
@@ -338,6 +340,13 @@ def _compact_trailing_image_blocks(content: str) -> str:
             trailing_blocks.append(node)
             continue
         break
+
+    if trailing_blocks:
+        final_trailing = trailing_blocks[0]
+        classes = list(final_trailing.get("class", []))
+        if "pdf-last-trailing-image" not in classes:
+            classes.append("pdf-last-trailing-image")
+        final_trailing["class"] = classes
 
     if len(trailing_blocks) == 1:
         trailing = trailing_blocks[0]
