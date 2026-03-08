@@ -250,15 +250,6 @@ def _classify_page(content: str, src_uri: str, title: str) -> str:
     else:
         classes.append("pdf-large")
 
-    # Heuristic: pages with multiple images and light/medium text are the ones
-    # most likely to spill a final image onto an almost-empty trailing page.
-    # Add a compact class so CSS can shrink image blocks within reason.
-    if img_count >= 3:
-        classes.append("pdf-compact-images")
-        classes.append("pdf-compact-images-strong")
-    elif img_count == 2 and text_len <= 1800:
-        classes.append("pdf-compact-images")
-
     return " ".join(classes)
 
 
@@ -325,8 +316,24 @@ def _compact_trailing_image_blocks(content: str) -> str:
     soup = BeautifulSoup(content, "html.parser")
     top_level_tags = [node for node in soup.contents if isinstance(node, Tag)]
 
+    # Consecutive standalone image blocks trigger poor pagination in Chrome's
+    # PDF renderer. Insert an invisible separator between adjacent blocks so the
+    # layout behaves like there is a line of content between them, without
+    # changing the visible output.
+    previous_was_image = False
+    for node in top_level_tags:
+        current_is_image = _is_standalone_image_block(node)
+        if current_is_image and previous_was_image:
+            separator = soup.new_tag("div")
+            separator["class"] = ["pdf-image-flow-break"]
+            separator["aria-hidden"] = "true"
+            node.insert_before(separator)
+        previous_was_image = current_is_image
+
+    # Preserve the useful single-trailing-image case for large lone screenshots.
+    refreshed_tags = [node for node in soup.contents if isinstance(node, Tag)]
     trailing_blocks: list[Tag] = []
-    for node in reversed(top_level_tags):
+    for node in reversed(refreshed_tags):
         if _is_standalone_image_block(node):
             trailing_blocks.append(node)
             continue
@@ -338,39 +345,6 @@ def _compact_trailing_image_blocks(content: str) -> str:
         if "pdf-single-trailing-image" not in classes:
             classes.append("pdf-single-trailing-image")
         trailing["class"] = classes
-        return str(soup)
-
-    if len(trailing_blocks) < 2:
-        return content
-
-    if len(trailing_blocks) == 2:
-        for node in trailing_blocks:
-            classes = list(node.get("class", []))
-            if "pdf-trailing-image-block" not in classes:
-                classes.append("pdf-trailing-image-block")
-            node["class"] = classes
-
-        first_trailing = trailing_blocks[-1]
-        first_classes = list(first_trailing.get("class", []))
-        if "pdf-trailing-image-block-first" not in first_classes:
-            first_classes.append("pdf-trailing-image-block-first")
-        first_trailing["class"] = first_classes
-        return str(soup)
-
-    # For 3+ trailing images, keep the overall visual size closer to normal,
-    # but tighten the run spacing and shrink only the first image block enough
-    # to reduce the large blank gap after the preceding text.
-    for node in trailing_blocks:
-        classes = list(node.get("class", []))
-        if "pdf-trailing-image-run" not in classes:
-            classes.append("pdf-trailing-image-run")
-        node["class"] = classes
-
-    first_trailing = trailing_blocks[-1]
-    first_classes = list(first_trailing.get("class", []))
-    if "pdf-trailing-image-run-first" not in first_classes:
-        first_classes.append("pdf-trailing-image-run-first")
-    first_trailing["class"] = first_classes
 
     return str(soup)
 

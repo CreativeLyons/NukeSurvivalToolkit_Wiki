@@ -253,12 +253,14 @@ section[data-url] img,
 section[data-url] .pdf-video-thumb img {
   display: block !important;
   max-width: 100% !important;
-  max-height: 56vh !important;
+  max-height: 145mm !important;
   width: auto !important;
   height: auto !important;
   margin: 0.5rem auto !important;
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
+  page-break-before: auto !important;
+  break-before: auto !important;
+  page-break-inside: auto !important;
+  break-inside: auto !important;
 }
 
 /* Standalone image blocks should use the full content width. */
@@ -267,24 +269,28 @@ section[data-url] .pdf-video-thumb {
   width: 100% !important;
 }
 
-/* Compact multi-image pages so a final image is less likely to spill onto a
-   mostly blank trailing page. Roughly 75% of the default image height. */
-section[data-url].pdf-compact-images img,
-section[data-url].pdf-compact-images .pdf-video-thumb img {
-  max-height: 34vh !important;
-}
-
-/* Stronger compaction for very image-heavy pages. */
-section[data-url].pdf-compact-images-strong img,
-section[data-url].pdf-compact-images-strong .pdf-video-thumb img {
-  max-height: 31vh !important;
-}
-
 /* A single trailing screenshot after text should read large and can afford
    a much looser height cap so it reaches closer to the text margins. */
 section[data-url] .pdf-single-trailing-image img,
 section[data-url] .pdf-single-trailing-image .pdf-video-thumb img {
-  max-height: 68vh !important;
+  max-height: 170mm !important;
+}
+
+/* Invisible structural separator inserted between consecutive standalone image
+   blocks so Chrome does not treat the run as one problematic stack. */
+section[data-url] .pdf-image-flow-break {
+  display: block !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  page-break-before: auto !important;
+  break-before: auto !important;
+  page-break-after: auto !important;
+  break-after: auto !important;
 }
 
 /* Trailing image-only blocks after text are the most common source of
@@ -292,8 +298,10 @@ section[data-url] .pdf-single-trailing-image .pdf-video-thumb img {
 section[data-url] .pdf-trailing-image-block {
   margin: 0.2rem auto 0.35rem !important;
   text-align: center !important;
-  break-inside: avoid !important;
-  page-break-inside: avoid !important;
+  page-break-before: auto !important;
+  break-before: auto !important;
+  break-inside: auto !important;
+  page-break-inside: auto !important;
 }
 
 section[data-url] .pdf-trailing-image-block-first {
@@ -302,7 +310,7 @@ section[data-url] .pdf-trailing-image-block-first {
 
 section[data-url] .pdf-trailing-image-block img,
 section[data-url] .pdf-trailing-image-block .pdf-video-thumb img {
-  max-height: 31vh !important;
+  max-height: 82mm !important;
   margin: 0.15rem auto !important;
 }
 
@@ -312,8 +320,10 @@ section[data-url] .pdf-trailing-image-block .pdf-video-thumb img {
 section[data-url] .pdf-trailing-image-run {
   margin: 0.3rem auto 0.4rem !important;
   text-align: center !important;
-  break-inside: avoid !important;
-  page-break-inside: avoid !important;
+  page-break-before: auto !important;
+  break-before: auto !important;
+  break-inside: auto !important;
+  page-break-inside: auto !important;
 }
 
 section[data-url] .pdf-trailing-image-run img,
@@ -327,7 +337,12 @@ section[data-url] .pdf-trailing-image-run-first {
 
 section[data-url] .pdf-trailing-image-run-first img,
 section[data-url] .pdf-trailing-image-run-first .pdf-video-thumb img {
-  max-height: 31vh !important;
+  max-height: 82mm !important;
+}
+
+section[data-url] .pdf-trailing-image-run-second img,
+section[data-url] .pdf-trailing-image-run-second .pdf-video-thumb img {
+  max-height: 82mm !important;
 }
 
 section[data-url] p:has(> img:only-child) {
