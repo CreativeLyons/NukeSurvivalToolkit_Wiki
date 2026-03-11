@@ -2,15 +2,14 @@
 """Build NST wiki tool-pages PDF from markdown source.
 
 Implemented targets:
-- tool-pages           All 246 tool pages, in nav order
-- tool-pages --category NAME   Single category (e.g. draw, filter, transform)
+- tool-pages                         All tool pages, in nav order
+- tool-pages --category NAME [...]   Limited category subset for faster testing
 
 Uses the same render pipeline as make_wiki_pdf:
   MkDocs build → merged HTML → filter articles → Playwright → stamp page numbers
 
-Non-tool pages (Home, Intro, Tech Specs, Menus, Special Thanks, Contact) are
-excluded. Category index/nav pages are excluded. Tool pages flow naturally, with
-small tools sharing pages via the pdf-small CSS class (set by pdf_preprocess.py).
+Non-tool pages are excluded. Category-limited builds keep only the selected
+tool menus.
 """
 
 from __future__ import annotations
@@ -43,7 +42,6 @@ STAMP_PAGE_NUMBER_BOTTOM_GAP_PT = "14.0"
 
 # Non-tool articles excluded from the tool-pages PDF.
 # data-url values as produced by mkdocs-with-pdf (leading /, trailing /).
-# Home page comes out as "/." so we match that separately.
 NON_TOOL_URLS = {
     "/.",               # Home / index.md
     "/intro/",
@@ -61,7 +59,7 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Build NST wiki tool-pages PDF. "
             "Target: tool-pages. "
-            "Use --category to limit to one or more categories."
+            "Default is the full tool-pages build; use --category to limit to one or more categories for testing."
         )
     )
     parser.add_argument(
@@ -103,6 +101,11 @@ def parse_args() -> argparse.Namespace:
         "--verbose",
         action="store_true",
         help="Show underlying MkDocs and renderer command output.",
+    )
+    parser.add_argument(
+        "--no-page-numbers",
+        action="store_true",
+        help="Skip final page-number stamping (used by merged PDF assembly).",
     )
     return parser.parse_args()
 
@@ -285,7 +288,7 @@ def remove_non_tool_articles(
     non_tool_urls: set[str] = NON_TOOL_URLS,
     non_tool_ids: set[str] = NON_TOOL_IDS,
 ) -> int:
-    """Remove front/back matter articles from the merged HTML in-place.
+    """Remove non-tool front/back matter articles from the merged HTML in-place.
 
     Removes:
     - doc-cover and doc-toc articles (mkdocs-with-pdf special articles)
@@ -310,25 +313,17 @@ def remove_non_tool_articles(
 
 
 def filter_to_categories(html_path: Path, categories: list[str]) -> int:
-    """Keep only the article(s) whose tool sections match the given categories.
-
-    In the merged HTML, each nav category is ONE <article> element (with a
-    hash-based id) containing one <section> per tool (each with data-url like
-    "/draw/constant-pro/"). This function keeps only the article(s) whose
-    sections match one of the requested category prefixes.
-
-    Returns the number of tool sections kept.
-    """
+    """Keep only the article(s) whose tool sections match the given categories."""
     prefixes = tuple(f"/{category}/" for category in categories)
     soup = BeautifulSoup(html_path.read_text(encoding="utf-8"), "html.parser")
     body = soup.body
     if body is None:
         raise SystemExit("ERROR: no <body> in merged HTML")
 
-    kept = []
     kept_count = 0
+    kept = []
+
     for article in body.find_all("article", recursive=False):
-        # Check if this article contains any tool sections for this category
         sections = article.find_all("section", attrs={"data-url": True})
         matching = [s for s in sections if s.get("data-url", "").startswith(prefixes)]
         if matching:
@@ -359,6 +354,7 @@ def build_tool_pages(
     output_path: Path,
     playwright_python: str,
     verbose: bool,
+    stamp_numbers: bool,
 ) -> Path:
     nav = load_full_nav()
 
@@ -375,7 +371,15 @@ def build_tool_pages(
         if categories:
             kept = filter_to_categories(html_path, categories)
             label = ", ".join(categories)
-            print(f"  Categories '{label}': kept {kept} article(s).")
+            print(f"  Categories '{label}': kept {kept} tool article(s).")
+        else:
+            kept = page_count_estimate = 0
+            # Count tool sections for logging after non-tool removal only.
+            soup = BeautifulSoup(html_path.read_text(encoding="utf-8"), "html.parser")
+            for article in soup.body.find_all("article", recursive=False):
+                page_count_estimate += len(article.find_all("section", attrs={"data-url": True}))
+            kept = page_count_estimate
+            print(f"  Kept {kept} tool article(s).")
 
         print("Rendering PDF…")
         render_html_to_pdf(
@@ -386,16 +390,17 @@ def build_tool_pages(
             verbose=verbose,
         )
 
-    total = page_count(output_path)
-    print(f"Stamping page numbers (1–{total})…")
-    stamp_page_numbers(
-        output_path,
-        first_page_index=1,
-        last_page_index=total,
-        start_number=1,
-        playwright_python=playwright_python,
-        verbose=verbose,
-    )
+    if stamp_numbers:
+        total = page_count(output_path)
+        print(f"Stamping page numbers (1–{total})…")
+        stamp_page_numbers(
+            output_path,
+            first_page_index=1,
+            last_page_index=total,
+            start_number=1,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
     return output_path
 
 
@@ -429,6 +434,7 @@ def main() -> int:
         output_path=output_path,
         playwright_python=playwright_python,
         verbose=args.verbose,
+        stamp_numbers=not args.no_page_numbers,
     )
 
     print(output_path)

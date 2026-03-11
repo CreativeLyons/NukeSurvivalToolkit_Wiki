@@ -65,7 +65,7 @@ Its purpose is to generate the printable PDF documentation from the wiki source,
 Current implemented targets:
 
 - `cover`
-- `page2`
+- `about-installation`
 - `technical-details`
 - `menu`
 - `contact`
@@ -73,10 +73,21 @@ Current implemented targets:
 - `pages-1-2`
 - `pages-1-5`
 - `full-so-far`
+- `full-wiki`
 
-The content-backed slice targets now render from the wiki markdown source (`intro.md`, `techSpecs.md`, `menus.md`, `special-thanks.md`, `contact.md`) so the wiki and the printable subset builds stay aligned while preserving the approved PDF shell. `page2` keeps its approved front-matter styling, but its content now comes from `intro.md`.
+The content-backed slice targets now render from the wiki markdown source (`intro.md`, `techSpecs.md`, `menus.md`, `special-thanks.md`, `contact.md`) so the wiki and the printable subset builds stay aligned while preserving the approved PDF shell. `about-installation` keeps its approved front-matter styling, but its content now comes from `intro.md`.
+
+The older `page2` target name still works as a legacy alias, but `about-installation` is now the canonical name.
 
 The finished review PDFs now receive page numbers in one final stamping pass, so the cover and interior pages share the same numbering position.
+
+The merged full-book path now keeps the approved main pages and the tool pages as separate sources of truth:
+
+- `./make_wiki_pdf full-so-far` remains the approved non-tool main-page review build.
+- `./make_tool_pages_pdf tool-pages` remains the tool-pages-only build path.
+- `./make_wiki_pdf full-wiki` builds both outputs separately, merges them as front main pages -> tool pages -> Special Thanks / Contact, and then stamps one consecutive page-number sequence across the merged result.
+
+For faster tool-page iteration, `./make_tool_pages_pdf tool-pages` still supports `--category` flags to render one or more tool menus without touching the approved main-page build path.
 
 Requirements:
 

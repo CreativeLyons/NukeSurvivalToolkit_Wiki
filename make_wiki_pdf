@@ -3,7 +3,7 @@
 
 Current implemented targets:
 - cover
-- page2
+- about-installation
 - technical-details
 - contact
 - special-thanks
@@ -12,9 +12,9 @@ Current implemented targets:
 - full-so-far
 - menu
 
-The cover keeps its approved render path. Page 2 and the other implemented
-sections preserve the approved PDF shell while sourcing their content from the
-wiki markdown files under documentation/docs/.
+The cover keeps its approved render path. The about-installation page and the
+other implemented sections preserve the approved PDF shell while sourcing their
+content from the wiki markdown files under documentation/docs/.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ DOC_ROOT = REPO_ROOT / "documentation"
 MKDOCS_PDF_CONFIG = DOC_ROOT / "mkdocs.pdf.yml"
 PDF_BROWSER_CSS = DOC_ROOT / "docs" / "css" / "pdf-browser.css"
 COVER_IMAGE = DOC_ROOT / "docs" / "img" / "pdf" / "NukeSurvivalToolkit_Splashpage_cover.jpg"
-PAGE2_TEMPLATE = DOC_ROOT / "templates" / "page2.html"
+ABOUT_INSTALLATION_TEMPLATE = DOC_ROOT / "templates" / "about-installation.html"
 TECHNICAL_DETAILS_TEMPLATE = DOC_ROOT / "templates" / "technical_details.html"
 CONTACT_TEMPLATE = DOC_ROOT / "templates" / "contact.html"
 SPECIAL_THANKS_TEMPLATE = DOC_ROOT / "templates" / "special-thanks.html"
@@ -46,6 +46,7 @@ MENU_TEMPLATE = DOC_ROOT / "templates" / "menu.html"
 TOOLBAR_ICON = DOC_ROOT / "docs" / "img" / "NukeSurvivalToolkit_Documentation_v2.1.0.webp"
 JETBRAINS_MONO_REGULAR = DOC_ROOT / "docs" / "assets" / "fonts" / "jetbrains-mono-400-normal-latin.woff2"
 STAMP_PAGE_NUMBERS_SCRIPT = DOC_ROOT / "scripts" / "stamp_pdf_page_numbers.py"
+TOOL_PAGES_SCRIPT = REPO_ROOT / "make_tool_pages_pdf"
 DEFAULT_VERSION = "v2.2.0"
 DEFAULT_OUTPUT_DIR = Path("/tmp/nst-wiki-pdf")
 INTRO_DOC = DOC_ROOT / "docs" / "intro.md"
@@ -74,10 +75,11 @@ STAMP_PAGE_NUMBER_FONT_NAME = "Helvetica"
 STAMP_PAGE_NUMBER_FONT_SIZE_PT = "11.04"
 STAMP_PAGE_NUMBER_RIGHT_GAP_PT = "33.0"
 STAMP_PAGE_NUMBER_BOTTOM_GAP_PT = "14.0"
+ABOUT_INSTALLATION_TARGET = "about-installation"
+LEGACY_ABOUT_INSTALLATION_ALIAS = "page2"
 PLANNED_TARGETS = (
     "main-sections",
     "tool-pages",
-    "full-wiki",
 )
 TECHNICAL_DETAILS_PAGE_START = 3
 TECHNICAL_DETAILS_CONTEXT_PAGES = TECHNICAL_DETAILS_PAGE_START - 1
@@ -87,17 +89,17 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Build approved NST wiki PDF slices as local review artifacts. "
-            "Currently implemented: cover, page2, technical-details, "
-            "contact, special-thanks, pages-1-2, pages-1-5, full-so-far, menu."
+            "Currently implemented: cover, about-installation, technical-details, "
+            "contact, special-thanks, pages-1-2, pages-1-5, full-so-far, full-wiki, menu."
         )
     )
     parser.add_argument(
         "target",
         help=(
-            "Target to build. Implemented now: cover, page2, "
+            "Target to build. Implemented now: cover, about-installation, "
             "technical-details, contact, special-thanks, pages-1-2, "
-            "pages-1-5, full-so-far, menu. "
-            "Planned later: main-sections, tool-pages, full-wiki."
+            "pages-1-5, full-so-far, full-wiki, menu. Legacy alias still accepted: page2. "
+            "Planned later: main-sections, tool-pages."
         ),
     )
     parser.add_argument("--version", default=DEFAULT_VERSION, help="Release string for the cover subtitle.")
@@ -402,10 +404,32 @@ def extract_pdf_pages(
     return output_path
 
 
+def merge_pdf_sequence(
+    pdf_paths: list[Path],
+    output_path: Path,
+    *,
+    verbose: bool,
+) -> Path:
+    if not pdf_paths:
+        raise SystemExit("ERROR: no PDFs provided for merge.")
+    run(
+        ["pdfunite", *[str(path) for path in pdf_paths], str(output_path)],
+        stdout=None if verbose else subprocess.DEVNULL,
+        stderr=None if verbose else subprocess.DEVNULL,
+    )
+    return output_path
+
+
+def normalize_target(raw_target: str) -> str:
+    if raw_target == LEGACY_ABOUT_INSTALLATION_ALIAS:
+        return ABOUT_INSTALLATION_TARGET
+    return raw_target
+
+
 def compute_page_sequence(
     section_page_counts: dict[str, int],
 ) -> dict[str, tuple[int, ...]]:
-    section_order = ["cover", "page2", "technical-details", "menu", "special-thanks", "contact"]
+    section_order = ["cover", ABOUT_INSTALLATION_TARGET, "technical-details", "menu", "special-thanks", "contact"]
     result: dict[str, tuple[int, ...]] = {}
     current_page = 1
     for section in section_order:
@@ -478,7 +502,7 @@ def inject_margin_box_page_numbers(soup: BeautifulSoup, *, page_numbers: tuple[i
     head.append(style)
 
 
-def populate_page2_code_highlight(soup: BeautifulSoup, code: Tag) -> None:
+def populate_about_installation_code_highlight(soup: BeautifulSoup, code: Tag) -> None:
     if code.get_text(strip=True) != 'nuke.pluginAddPath("Your/NukeSurvivalToolkit/FolderPath/Here")':
         return
 
@@ -498,7 +522,7 @@ def populate_page2_code_highlight(soup: BeautifulSoup, code: Tag) -> None:
         code.append(span)
 
 
-def style_page2_content(soup: BeautifulSoup, tag: Tag) -> None:
+def style_about_installation_content(soup: BeautifulSoup, tag: Tag) -> None:
     for img in tag.find_all("img"):
         classes = list(img.get("class", []))
         if "toolbar-icon" not in classes:
@@ -507,17 +531,17 @@ def style_page2_content(soup: BeautifulSoup, tag: Tag) -> None:
 
     for code in tag.find_all("code"):
         if code.parent is not None and code.parent.name == "pre":
-            populate_page2_code_highlight(soup, code)
+            populate_about_installation_code_highlight(soup, code)
 
 
-def page2_html() -> str:
+def about_installation_html() -> str:
     article = markdown_article(INTRO_DOC)
     children = [node for node in article.children if isinstance(node, Tag)]
     if not children:
         raise SystemExit("ERROR: intro markdown has no content.")
 
     soup = template_soup(
-        PAGE2_TEMPLATE,
+        ABOUT_INSTALLATION_TEMPLATE,
         replacements={
             "__TOOLBAR_ICON_URI__": TOOLBAR_ICON.resolve().as_uri(),
             "__JETBRAINS_MONO_REGULAR_URI__": JETBRAINS_MONO_REGULAR.resolve().as_uri(),
@@ -525,13 +549,13 @@ def page2_html() -> str:
     )
     body = soup.body
     if body is None:
-        raise SystemExit("ERROR: page 2 template has no <body>.")
+        raise SystemExit("ERROR: about-installation template has no <body>.")
     body.clear()
 
     for child in children:
         child_clone = clone_tag(child)
         strip_ids(child_clone)
-        style_page2_content(soup, child_clone)
+        style_about_installation_content(soup, child_clone)
         body.append(child_clone)
 
     page_number_node = soup.new_tag("div", **{"class": "page-number"})
@@ -541,7 +565,7 @@ def page2_html() -> str:
     return str(soup)
 
 
-def build_cover(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+def build_cover(*, version: str, output_path: Path, playwright_python: str, verbose: bool, stamp_numbers: bool = True) -> Path:
     with tempfile.TemporaryDirectory(prefix="nst-make-wiki-cover.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         html_path = build_merged_html(temp_dir, version=version, nav=[{"Home": "index.md"}], verbose=verbose)
@@ -553,33 +577,43 @@ def build_cover(*, version: str, output_path: Path, playwright_python: str, verb
             playwright_python=playwright_python,
             verbose=verbose,
         )
-    return stamp_page_numbers(
-        output_path,
-        first_page_index=1,
-        last_page_index=1,
-        start_number=1,
-        playwright_python=playwright_python,
-        verbose=verbose,
-    )
+    if stamp_numbers:
+        return stamp_page_numbers(
+            output_path,
+            first_page_index=1,
+            last_page_index=1,
+            start_number=1,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+    return output_path
 
 
-def build_page2(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+def build_about_installation(
+    *,
+    output_path: Path,
+    playwright_python: str,
+    verbose: bool,
+    stamp_numbers: bool = True,
+) -> Path:
     render_standalone_html(
-        page2_html(),
-        temp_prefix="nst-make-wiki-page2.",
-        filename="page2.html",
+        about_installation_html(),
+        temp_prefix="nst-make-wiki-about-installation.",
+        filename="about-installation.html",
         output_path=output_path,
         playwright_python=playwright_python,
         verbose=verbose,
     )
-    return stamp_page_numbers(
-        output_path,
-        first_page_index=1,
-        last_page_index=1,
-        start_number=2,
-        playwright_python=playwright_python,
-        verbose=verbose,
-    )
+    if stamp_numbers:
+        return stamp_page_numbers(
+            output_path,
+            first_page_index=1,
+            last_page_index=1,
+            start_number=2,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+    return output_path
 
 
 def technical_nested_item(soup: BeautifulSoup, nested_li: Tag, nested_index: int, *, style: str) -> Tag:
@@ -734,7 +768,7 @@ def technical_details_html() -> str:
     return str(soup)
 
 
-def build_technical_details(*, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+def build_technical_details(*, output_path: Path, playwright_python: str, verbose: bool, stamp_numbers: bool = True) -> Path:
     with tempfile.TemporaryDirectory(prefix="nst-make-wiki-techdetails.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         html_path = temp_dir / "technical-details.html"
@@ -757,15 +791,17 @@ def build_technical_details(*, output_path: Path, playwright_python: str, verbos
             end_page=total_pages,
             verbose=verbose,
         )
-        stamped_last_page = total_pages - TECHNICAL_DETAILS_CONTEXT_PAGES
-        return stamp_page_numbers(
-            output_path,
-            first_page_index=1,
-            last_page_index=stamped_last_page,
-            start_number=TECHNICAL_DETAILS_PAGE_START,
-            playwright_python=playwright_python,
-            verbose=verbose,
-        )
+        if stamp_numbers:
+            stamped_last_page = total_pages - TECHNICAL_DETAILS_CONTEXT_PAGES
+            return stamp_page_numbers(
+                output_path,
+                first_page_index=1,
+                last_page_index=stamped_last_page,
+                start_number=TECHNICAL_DETAILS_PAGE_START,
+                playwright_python=playwright_python,
+                verbose=verbose,
+            )
+        return output_path
 
 
 def technical_details_page_count(*, playwright_python: str, verbose: bool) -> int:
@@ -859,10 +895,17 @@ def menu_html(*, page_number: int) -> str:
     return str(soup)
 
 
-def build_menu(*, output_path: Path, playwright_python: str, verbose: bool, page_number: int | None = None) -> Path:
+def build_menu(
+    *,
+    output_path: Path,
+    playwright_python: str,
+    verbose: bool,
+    page_number: int | None = None,
+    stamp_numbers: bool = True,
+) -> Path:
     if page_number is None:
         tech_pages = technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
-        seq = compute_page_sequence({"cover": 1, "page2": 1, "technical-details": tech_pages, "menu": 1})
+        seq = compute_page_sequence({"cover": 1, ABOUT_INSTALLATION_TARGET: 1, "technical-details": tech_pages, "menu": 1})
         page_number = seq["menu"][0]
     render_standalone_html(
         menu_html(page_number=page_number),
@@ -872,14 +915,16 @@ def build_menu(*, output_path: Path, playwright_python: str, verbose: bool, page
         playwright_python=playwright_python,
         verbose=verbose,
     )
-    return stamp_page_numbers(
-        output_path,
-        first_page_index=1,
-        last_page_index=1,
-        start_number=page_number,
-        playwright_python=playwright_python,
-        verbose=verbose,
-    )
+    if stamp_numbers:
+        return stamp_page_numbers(
+            output_path,
+            first_page_index=1,
+            last_page_index=1,
+            start_number=page_number,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+    return output_path
 
 
 def special_thanks_html(*, page_numbers: tuple[int, int]) -> str:
@@ -974,13 +1019,14 @@ def build_special_thanks(
     playwright_python: str,
     verbose: bool,
     page_numbers: tuple[int, ...] | None = None,
+    stamp_numbers: bool = True,
 ) -> Path:
     if page_numbers is None:
         tech_pages = technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
         m_pages = menu_page_count(playwright_python=playwright_python, verbose=verbose)
         st_pages = special_thanks_page_count(playwright_python=playwright_python, verbose=verbose)
         seq = compute_page_sequence({
-            "cover": 1, "page2": 1, "technical-details": tech_pages,
+            "cover": 1, ABOUT_INSTALLATION_TARGET: 1, "technical-details": tech_pages,
             "menu": m_pages, "special-thanks": st_pages,
         })
         page_numbers = seq["special-thanks"]
@@ -992,14 +1038,16 @@ def build_special_thanks(
         playwright_python=playwright_python,
         verbose=verbose,
     )
-    return stamp_page_numbers(
-        output_path,
-        first_page_index=1,
-        last_page_index=len(page_numbers),
-        start_number=page_numbers[0],
-        playwright_python=playwright_python,
-        verbose=verbose,
-    )
+    if stamp_numbers:
+        return stamp_page_numbers(
+            output_path,
+            first_page_index=1,
+            last_page_index=len(page_numbers),
+            start_number=page_numbers[0],
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+    return output_path
 
 
 def contact_html(*, page_number: int) -> str:
@@ -1031,13 +1079,20 @@ def contact_html(*, page_number: int) -> str:
     return str(soup)
 
 
-def build_contact(*, output_path: Path, playwright_python: str, verbose: bool, page_number: int | None = None) -> Path:
+def build_contact(
+    *,
+    output_path: Path,
+    playwright_python: str,
+    verbose: bool,
+    page_number: int | None = None,
+    stamp_numbers: bool = True,
+) -> Path:
     if page_number is None:
         tech_pages = technical_details_page_count(playwright_python=playwright_python, verbose=verbose)
         m_pages = menu_page_count(playwright_python=playwright_python, verbose=verbose)
         st_pages = special_thanks_page_count(playwright_python=playwright_python, verbose=verbose)
         seq = compute_page_sequence({
-            "cover": 1, "page2": 1, "technical-details": tech_pages,
+            "cover": 1, ABOUT_INSTALLATION_TARGET: 1, "technical-details": tech_pages,
             "menu": m_pages, "special-thanks": st_pages, "contact": 1,
         })
         page_number = seq["contact"][0]
@@ -1049,30 +1104,36 @@ def build_contact(*, output_path: Path, playwright_python: str, verbose: bool, p
         playwright_python=playwright_python,
         verbose=verbose,
     )
-    return stamp_page_numbers(
-        output_path,
-        first_page_index=1,
-        last_page_index=1,
-        start_number=page_number,
-        playwright_python=playwright_python,
-        verbose=verbose,
-    )
+    if stamp_numbers:
+        return stamp_page_numbers(
+            output_path,
+            first_page_index=1,
+            last_page_index=1,
+            start_number=page_number,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+    return output_path
 
 
 def build_pages_1_2(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
     with tempfile.TemporaryDirectory(prefix="nst-make-wiki-pages12.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         cover_pdf = temp_dir / "cover.pdf"
-        page2_pdf = temp_dir / "page2.pdf"
+        about_installation_pdf = temp_dir / "about-installation.pdf"
         build_cover(
             version=version,
             output_path=cover_pdf,
             playwright_python=playwright_python,
             verbose=verbose,
         )
-        build_page2(output_path=page2_pdf, playwright_python=playwright_python, verbose=verbose)
+        build_about_installation(
+            output_path=about_installation_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
         run(
-            ["pdfunite", str(cover_pdf), str(page2_pdf), str(output_path)],
+            ["pdfunite", str(cover_pdf), str(about_installation_pdf), str(output_path)],
             stdout=None if verbose else subprocess.DEVNULL,
             stderr=None if verbose else subprocess.DEVNULL,
         )
@@ -1083,7 +1144,7 @@ def build_pages_1_5(*, version: str, output_path: Path, playwright_python: str, 
     with tempfile.TemporaryDirectory(prefix="nst-make-wiki-pages15.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         cover_pdf = temp_dir / "cover.pdf"
-        page2_pdf = temp_dir / "page2.pdf"
+        about_installation_pdf = temp_dir / "about-installation.pdf"
         technical_details_pdf = temp_dir / "technical-details.pdf"
         build_cover(
             version=version,
@@ -1091,7 +1152,11 @@ def build_pages_1_5(*, version: str, output_path: Path, playwright_python: str, 
             playwright_python=playwright_python,
             verbose=verbose,
         )
-        build_page2(output_path=page2_pdf, playwright_python=playwright_python, verbose=verbose)
+        build_about_installation(
+            output_path=about_installation_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
         build_technical_details(
             output_path=technical_details_pdf,
             playwright_python=playwright_python,
@@ -1101,7 +1166,7 @@ def build_pages_1_5(*, version: str, output_path: Path, playwright_python: str, 
             [
                 "pdfunite",
                 str(cover_pdf),
-                str(page2_pdf),
+                str(about_installation_pdf),
                 str(technical_details_pdf),
                 str(output_path),
             ],
@@ -1115,7 +1180,7 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
     with tempfile.TemporaryDirectory(prefix="nst-make-wiki-full-so-far.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         cover_pdf = temp_dir / "cover.pdf"
-        page2_pdf = temp_dir / "page2.pdf"
+        about_installation_pdf = temp_dir / "about-installation.pdf"
         technical_details_pdf = temp_dir / "technical-details.pdf"
         menu_pdf = temp_dir / "menu.pdf"
         special_thanks_pdf = temp_dir / "special-thanks.pdf"
@@ -1126,7 +1191,11 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
             playwright_python=playwright_python,
             verbose=verbose,
         )
-        build_page2(output_path=page2_pdf, playwright_python=playwright_python, verbose=verbose)
+        build_about_installation(
+            output_path=about_installation_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
         build_technical_details(
             output_path=technical_details_pdf,
             playwright_python=playwright_python,
@@ -1136,7 +1205,7 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
         m_pages = menu_page_count(playwright_python=playwright_python, verbose=verbose)
         st_pages = special_thanks_page_count(playwright_python=playwright_python, verbose=verbose)
         seq = compute_page_sequence({
-            "cover": 1, "page2": 1, "technical-details": technical_pages,
+            "cover": 1, ABOUT_INSTALLATION_TARGET: 1, "technical-details": technical_pages,
             "menu": m_pages, "special-thanks": st_pages, "contact": 1,
         })
         build_menu(
@@ -1161,7 +1230,7 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
             [
                 "pdfunite",
                 str(cover_pdf),
-                str(page2_pdf),
+                str(about_installation_pdf),
                 str(technical_details_pdf),
                 str(menu_pdf),
                 str(special_thanks_pdf),
@@ -1174,16 +1243,120 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
     return output_path
 
 
+def build_full_wiki(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-full-wiki.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        front_main_pdf = temp_dir / "front-main.pdf"
+        tool_pages_pdf = temp_dir / "tool-pages.pdf"
+        back_main_pdf = temp_dir / "back-main.pdf"
+        cover_pdf = temp_dir / "cover.pdf"
+        about_installation_pdf = temp_dir / "about-installation.pdf"
+        technical_details_pdf = temp_dir / "technical-details.pdf"
+        menu_pdf = temp_dir / "menu.pdf"
+        special_thanks_pdf = temp_dir / "special-thanks.pdf"
+        contact_pdf = temp_dir / "contact.pdf"
+
+        build_cover(
+            version=version,
+            output_path=cover_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            stamp_numbers=False,
+        )
+        build_about_installation(
+            output_path=about_installation_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            stamp_numbers=False,
+        )
+        build_technical_details(
+            output_path=technical_details_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            stamp_numbers=False,
+        )
+        build_menu(
+            output_path=menu_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            page_number=0,
+            stamp_numbers=False,
+        )
+        merge_pdf_sequence(
+            [cover_pdf, about_installation_pdf, technical_details_pdf, menu_pdf],
+            front_main_pdf,
+            verbose=verbose,
+        )
+
+        run(
+            [
+                sys.executable,
+                str(TOOL_PAGES_SCRIPT),
+                "tool-pages",
+                "--version",
+                version,
+                "--artifact-version",
+                "1",
+                "--output-dir",
+                str(temp_dir),
+                "--no-page-numbers",
+            ],
+            stdout=None if verbose else subprocess.DEVNULL,
+            stderr=None if verbose else subprocess.DEVNULL,
+        )
+        built_tool_pages_pdf = temp_dir / "nst_wiki_tool_pages_v1.pdf"
+        if not built_tool_pages_pdf.is_file():
+            raise SystemExit(f"ERROR: tool-pages PDF was not created: {built_tool_pages_pdf}")
+        shutil.copyfile(built_tool_pages_pdf, tool_pages_pdf)
+
+        build_special_thanks(
+            output_path=special_thanks_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            page_numbers=(0, 0),
+            stamp_numbers=False,
+        )
+        build_contact(
+            output_path=contact_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            page_number=0,
+            stamp_numbers=False,
+        )
+        merge_pdf_sequence(
+            [special_thanks_pdf, contact_pdf],
+            back_main_pdf,
+            verbose=verbose,
+        )
+
+        merge_pdf_sequence(
+            [front_main_pdf, tool_pages_pdf, back_main_pdf],
+            output_path,
+            verbose=verbose,
+        )
+
+    total_pages = page_count(output_path)
+    return stamp_page_numbers(
+        output_path,
+        first_page_index=1,
+        last_page_index=total_pages,
+        start_number=1,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
+
+
 def output_path_for(target: str, output_dir: Path, *, artifact_version: int) -> Path:
     filename = {
         "cover": f"nst_wiki_cover_v{artifact_version}.pdf",
-        "page2": f"nst_wiki_page2_v{artifact_version}.pdf",
+        ABOUT_INSTALLATION_TARGET: f"nst_wiki_about_installation_v{artifact_version}.pdf",
         "technical-details": f"nst_wiki_technical_details_v{artifact_version}.pdf",
         "contact": f"nst_wiki_contact_v{artifact_version}.pdf",
         "special-thanks": f"nst_wiki_special_thanks_v{artifact_version}.pdf",
         "pages-1-2": f"nst_wiki_v{artifact_version}.pdf",
         "pages-1-5": f"nst_wiki_v{artifact_version}.pdf",
         "full-so-far": f"nst_wiki_v{artifact_version}.pdf",
+        "full-wiki": f"nst_wiki_full_with_tools_v{artifact_version}.pdf",
         "menu": f"nst_wiki_v{artifact_version}-menu.pdf",
     }[target]
     return output_dir / filename
@@ -1195,23 +1368,23 @@ def open_pdf(path: Path) -> None:
 
 def main() -> int:
     args = parse_args()
-    target = args.target
+    target = normalize_target(args.target)
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if target in PLANNED_TARGETS:
         print(f"Target '{target}' is planned but not implemented yet.")
         print(
-            "Implemented targets: cover, page2, technical-details, contact, special-thanks, "
-            "pages-1-2, pages-1-5, full-so-far, menu"
+            "Implemented targets: cover, about-installation, technical-details, contact, special-thanks, "
+            "pages-1-2, pages-1-5, full-so-far, full-wiki, menu"
         )
         return 2
 
-    if target not in {"cover", "page2", "technical-details", "contact", "special-thanks", "pages-1-2", "pages-1-5", "full-so-far", "menu"}:
+    if target not in {"cover", ABOUT_INSTALLATION_TARGET, "technical-details", "contact", "special-thanks", "pages-1-2", "pages-1-5", "full-so-far", "full-wiki", "menu"}:
         print(f"Unknown target: {target}", file=sys.stderr)
         print(
-            "Implemented targets: cover, page2, technical-details, contact, special-thanks, "
-            "pages-1-2, pages-1-5, full-so-far, menu",
+            "Implemented targets: cover, about-installation, technical-details, contact, special-thanks, "
+            "pages-1-2, pages-1-5, full-so-far, full-wiki, menu",
             file=sys.stderr,
         )
         return 2
@@ -1226,8 +1399,8 @@ def main() -> int:
             playwright_python=playwright_python,
             verbose=args.verbose,
         )
-    elif target == "page2":
-        build_page2(output_path=output_path, playwright_python=playwright_python, verbose=args.verbose)
+    elif target == ABOUT_INSTALLATION_TARGET:
+        build_about_installation(output_path=output_path, playwright_python=playwright_python, verbose=args.verbose)
     elif target == "technical-details":
         build_technical_details(
             output_path=output_path,
@@ -1257,6 +1430,13 @@ def main() -> int:
         )
     elif target == "pages-1-5":
         build_pages_1_5(
+            version=args.version,
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=args.verbose,
+        )
+    elif target == "full-wiki":
+        build_full_wiki(
             version=args.version,
             output_path=output_path,
             playwright_python=playwright_python,

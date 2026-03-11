@@ -46,7 +46,7 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - The script is intentionally target-based so each approved section can be rebuilt without touching the rest of the book.
 - Current implemented targets:
   - `cover`
-  - `page2`
+  - `about-installation`
   - `technical-details`
   - `menu`
   - `contact`
@@ -54,6 +54,7 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
   - `pages-1-2`
   - `pages-1-5`
   - `full-so-far`
+  - `full-wiki`
 - Output defaults to `/tmp/nst-wiki-pdf/`.
 - The reviewed combined artifact naming scheme is `nst_wiki_vN.pdf`.
 - The older `documentation/scripts/build_pdf.sh` path remains useful for full-book experiments, but the section-by-section workflow should be built out through `./make_wiki_pdf`.
@@ -63,22 +64,23 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - The current approved subset is built through `./make_wiki_pdf full-so-far`.
 - It assembles:
   - `cover`
-  - `page2`
+  - `about-installation`
   - `technical-details`
   - `menu`
   - `special-thanks`
   - `contact`
-- Page 2 uses the dedicated approved shell template:
-  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/templates/page2.html`
-- The page 2 code block uses the repo-local JetBrains Mono asset and the replacement path string is intentionally red to warn users to change it.
-- Page 2 now acts as the source-of-truth front-matter shell, while its content comes from:
-  - `page2` -> `documentation/docs/intro.md`
-- The content slices after page 2 now build from the wiki markdown pages instead of standalone content templates:
+- The about-installation page uses the dedicated approved shell template:
+  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/templates/about-installation.html`
+- The about-installation code block uses the repo-local JetBrains Mono asset and the replacement path string is intentionally red to warn users to change it.
+- The about-installation page now acts as the source-of-truth front-matter shell, while its content comes from:
+  - `about-installation` -> `documentation/docs/intro.md`
+- The content slices after the about-installation page now build from the wiki markdown pages instead of standalone content templates:
   - `technical-details` -> `documentation/docs/techSpecs.md`
   - `menu` -> `documentation/docs/menus.md`
   - `special-thanks` -> `documentation/docs/special-thanks.md`
   - `contact` -> `documentation/docs/contact.md`
 - Individual section targets are rendered contextually from the combined subset and then extracted back out, so the current local review pages keep a consistent sequence.
+- The older `page2` target name still works as a legacy alias, but `about-installation` is now the canonical name.
 - `About` is no longer part of the live nav, and the old `documentation/docs/about.md` page has been removed.
 - `technical-details` now paginates as flowing content inside the approved shell, using two invisible context pages so Chrome lays it out as if it begins on page 3 before the real pages are extracted back out.
 - Final visible page numbers are no longer trusted to template HTML. The finished PDFs are stamped afterward by:
@@ -155,19 +157,39 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - Generated PDF test builds should remain local/temporary artifacts and should not be committed.
 - The tracked `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf` file is the original reference PDF, not a generated test iteration.
 - The current combined review target is `full-so-far`, which assembles cover, page 2, Technical Details, Menus, Special Thanks, and Contact into one local review PDF.
+- The current merged full-book target is `full-wiki`, which preserves the approved main-page build as truth and inserts the separately rendered tool-pages PDF between the front main pages and the end matter.
 - `make_wiki_pdf` currently depends on:
   - Playwright-capable Python
   - `pypdf`
   - Poppler CLI tools `pdfinfo`, `pdfseparate`, and `pdfunite`
 
-### AI Handoff Files (2026-03-06)
+### Merged PDF assembly
 
-- Current handoff prompt for another agent:
+- `make_tool_pages_pdf` is intentionally tool-only again. It should not re-render `Home`, `Intro`, `Tech Specs`, `Menus`, `Special Thanks`, or `Contact`.
+- `make_tool_pages_pdf tool-pages` remains the review path for tool pages and still accepts repeated `--category` flags for limited subset builds.
+- `make_tool_pages_pdf` now has an internal `--no-page-numbers` mode so `make_wiki_pdf` can reuse the tool-pages build during merged assembly without baking in an intermediate numbering pass.
+- `make_wiki_pdf full-wiki` now assembles the final merged PDF as:
+  - `cover`
+  - `about-installation`
+  - `technical-details`
+  - `menu`
+  - all tool pages from `make_tool_pages_pdf`
+  - `special-thanks`
+  - `contact`
+- The merged `full-wiki` flow stamps page numbers once, after merge, so the final numbering belongs to the combined result rather than the old `full-so-far` sequence.
+
+### AI Handoff Files (2026-03-12)
+
+- Current export-PDF handoff prompt:
+  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260312_004439_export-pdf_HANDOFF.md`
+- Current export-PDF factual status report:
+  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260312_004439_export-pdf_STATUS_REPORT.md`
+- Previous general handoff prompt:
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260306_HANDOFF.md`
-- Current factual status report:
+- Previous general factual status report:
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260306_STATUS_REPORT.md`
 
-Use those files as the first stop when handing this PDF work to another agent. They capture the current branch, the section-based `make_wiki_pdf` workflow, the user communication constraints, the current exploratory state, and the next PDF priorities after the markdown-backed content sourcing change.
+Use the 2026-03-12 export-PDF handoff files first when continuing the current branch-integration and TOC-transplant work. Use the 2026-03-06 files as older background on the earlier markdown-backed PDF architecture shift.
 
 Current takeover priority:
 - markdown-driven content sourcing is now in place for `technical-details`, `menu`, `special-thanks`, and `contact`
