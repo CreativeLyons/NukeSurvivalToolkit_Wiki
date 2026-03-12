@@ -1,0 +1,652 @@
+#!/usr/bin/env python3
+"""Public NST wiki PDF export entrypoint.
+
+Default behavior exports the full wiki book. Optional flags can narrow the
+output down to specific export parts or named presets.
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import shutil
+import tempfile
+from datetime import datetime
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parent
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "output" / "pdf"
+DEFAULT_OUTPUT_DIR_LABEL = "output/pdf"
+RELEASE_BASENAME = "NukeSurvivalToolkit_Documentation_Release"
+
+
+def load_script_module(name: str, path: Path):
+    loader = SourceFileLoader(name, str(path))
+    spec = importlib.util.spec_from_loader(name, loader)
+    if spec is None:
+        raise SystemExit(f"ERROR: could not load module spec for {path}")
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+WIKI_PDF = load_script_module("nst_make_wiki_pdf", REPO_ROOT / "make_wiki_pdf")
+TOOL_PDF = load_script_module("nst_make_tool_pages_pdf", REPO_ROOT / "make_tool_pages_pdf")
+
+EXPORT_PARTS = (
+    "cover",
+    "about-installation",
+    "technical-specs",
+    "menu",
+    "toc",
+    "tool-pages",
+    "special-thanks",
+    "contacts",
+)
+NON_TOOL_EXPORT_PARTS = (
+    "cover",
+    "about-installation",
+    "technical-specs",
+    "menu",
+    "special-thanks",
+    "contacts",
+)
+FRONT_NON_TOOL_EXPORT_PARTS = (
+    "cover",
+    "about-installation",
+    "technical-specs",
+    "menu",
+)
+BACK_NON_TOOL_EXPORT_PARTS = (
+    "special-thanks",
+    "contacts",
+)
+PART_TO_INTERNAL_SECTION = {
+    "cover": "cover",
+    "about-installation": "about-installation",
+    "technical-specs": "technical-details",
+    "menu": "menu",
+    "special-thanks": "special-thanks",
+    "contacts": "contact",
+}
+DEFAULT_PARTS_BY_MODE = {
+    "full-wiki": list(EXPORT_PARTS),
+    "tools-only": ["tool-pages"],
+    "non-tools-only": list(NON_TOOL_EXPORT_PARTS),
+}
+FRONT_NON_TOOL_SECTIONS = (
+    "cover",
+    "about-installation",
+    "technical-details",
+    "menu",
+)
+BACK_NON_TOOL_SECTIONS = (
+    "special-thanks",
+    "contact",
+)
+SECTION_ALIASES = {
+    "about": "about-installation",
+    "installation": "about-installation",
+    "intro": "about-installation",
+    "page2": "about-installation",
+    "technical": "technical-specs",
+    "technical-details": "technical-specs",
+    "technical-specs": "technical-specs",
+    "tech": "technical-specs",
+    "tech-specs": "technical-specs",
+    "techspecs": "technical-specs",
+    "menus": "menu",
+    "tool-index": "toc",
+    "tools": "tool-pages",
+    "tool-page": "tool-pages",
+    "thanks": "special-thanks",
+    "specialthanks": "special-thanks",
+    "contact": "contacts",
+}
+SECTION_TOC_LABELS = {
+    "about-installation": "About / Installation",
+    "technical-details": "Technical Details",
+    "menu": "Menus",
+}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Export NST wiki PDFs through one public command. "
+            "Defaults to the full-wiki preset with all sections, Tool Index, and tool pages."
+        )
+    )
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        choices=sorted(DEFAULT_PARTS_BY_MODE),
+        default="full-wiki",
+        help="Named preset to export (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--sections",
+        action="append",
+        default=[],
+        metavar="NAME[,NAME...]",
+        help=(
+            "Export parts to include. Available: cover, about-installation, "
+            "technical-specs, menu, toc, tool-pages, special-thanks, contacts. "
+            "Omit to use the selected preset. Use 'none' to clear the preset and "
+            "build only the explicitly listed parts."
+        ),
+    )
+    parser.add_argument(
+        "--tool-category",
+        action="append",
+        default=[],
+        metavar="NAME[,NAME...]",
+        help=(
+            "Limit tool pages to one or more categories such as draw, filter, "
+            "transform, 3d, cg, curves, utilities, or color."
+        ),
+    )
+    parser.add_argument(
+        "--version",
+        default=WIKI_PDF.DEFAULT_VERSION,
+        help="Release string used in the PDF cover subtitle and output filename (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help=f"Directory for output PDFs (default: repo-local {DEFAULT_OUTPUT_DIR_LABEL}).",
+    )
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Open the output PDF after building.",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show underlying renderer command output.",
+    )
+    return parser.parse_args()
+
+
+def normalize_sections(raw_sections: list[str]) -> list[str] | None:
+    if not raw_sections:
+        return None
+
+    seen: set[str] = set()
+
+    for raw in raw_sections:
+        for part in raw.split(","):
+            token = part.strip().lower()
+            if not token:
+                continue
+            if token in {"none", "no", "empty"}:
+                seen.clear()
+                continue
+            if token in {"all", "*"}:
+                seen = set(EXPORT_PARTS)
+                continue
+
+            normalized = SECTION_ALIASES.get(token, token)
+            if normalized not in EXPORT_PARTS:
+                valid = ", ".join(EXPORT_PARTS)
+                raise SystemExit(f"ERROR: unknown section '{token}'. Valid sections: {valid}")
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+
+    ordered_sections = [section for section in EXPORT_PARTS if section in seen]
+    if ordered_sections:
+        return ordered_sections
+    return []
+
+
+def resolve_selection(args: argparse.Namespace) -> tuple[list[str], list[str], bool, bool, list[str]]:
+    selected_sections = normalize_sections(args.sections)
+    tool_categories = TOOL_PDF.normalize_categories(args.tool_category)
+
+    if selected_sections is None:
+        export_parts = list(DEFAULT_PARTS_BY_MODE[args.mode])
+    else:
+        export_parts = selected_sections
+
+    include_tool_pages = "tool-pages" in export_parts
+    include_toc = "toc" in export_parts
+    non_tool_parts = [part for part in NON_TOOL_EXPORT_PARTS if part in export_parts]
+    sections = [PART_TO_INTERNAL_SECTION[part] for part in non_tool_parts]
+
+    if include_toc and not include_tool_pages:
+        raise SystemExit("ERROR: 'toc' requires 'tool-pages' to be selected as well.")
+
+    if tool_categories and not include_tool_pages:
+        raise SystemExit("ERROR: --tool-category requires 'tool-pages' to be selected.")
+
+    if not export_parts:
+        raise SystemExit("ERROR: nothing selected to export.")
+
+    return export_parts, sections, include_tool_pages, include_toc, tool_categories
+
+
+def normalize_version_label(raw_version: str) -> str:
+    version = raw_version.strip()
+    if not version:
+        raise SystemExit("ERROR: --version cannot be empty.")
+    if version[0] in {"v", "V"}:
+        return f"v{version[1:]}"
+    return f"v{version}"
+
+
+def resolve_output_dir(raw_output_dir: str | None) -> Path:
+    if raw_output_dir is None:
+        return DEFAULT_OUTPUT_DIR
+    output_dir = Path(raw_output_dir).expanduser()
+    if not output_dir.is_absolute():
+        output_dir = Path.cwd() / output_dir
+    return output_dir.resolve()
+
+
+def filename_suffix_components(
+    *,
+    export_parts: list[str],
+    include_tool_pages: bool,
+    include_toc: bool,
+    tool_categories: list[str],
+) -> list[str]:
+    non_tool_parts = [part for part in NON_TOOL_EXPORT_PARTS if part in export_parts]
+    has_all_non_tool_parts = non_tool_parts == list(NON_TOOL_EXPORT_PARTS)
+    is_full_wiki = include_tool_pages and include_toc and has_all_non_tool_parts and not tool_categories
+
+    if is_full_wiki:
+        return []
+    if export_parts == ["tool-pages"] and not tool_categories:
+        return ["tools-only"]
+    if not include_tool_pages and has_all_non_tool_parts:
+        return ["non-tools-only"]
+
+    suffixes: list[str] = []
+
+    if non_tool_parts and not has_all_non_tool_parts:
+        suffixes.append(f"sections-{'-'.join(non_tool_parts)}")
+
+    if include_toc and not (include_tool_pages and has_all_non_tool_parts):
+        suffixes.append("toc")
+
+    if include_tool_pages:
+        if tool_categories:
+            suffixes.append(f"tool-categories-{'-'.join(tool_categories)}")
+        elif export_parts != ["tool-pages"]:
+            suffixes.append("tool-pages")
+
+    if not suffixes:
+        suffixes.append("custom-export")
+
+    return suffixes
+
+
+def unique_output_path(output_dir: Path, stem: str) -> Path:
+    candidate = output_dir / f"{stem}.pdf"
+    if not candidate.exists():
+        return candidate
+
+    index = 1
+    while True:
+        candidate = output_dir / f"{stem}__{index:02d}.pdf"
+        if not candidate.exists():
+            return candidate
+        index += 1
+
+
+def build_section_pdf(
+    section: str,
+    *,
+    output_path: Path,
+    version: str,
+    playwright_python: str,
+    verbose: bool,
+) -> Path:
+    if section == "cover":
+        return WIKI_PDF.build_cover(
+            version=version,
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            stamp_numbers=False,
+        )
+    if section == "about-installation":
+        return WIKI_PDF.build_about_installation(
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            stamp_numbers=False,
+        )
+    if section == "technical-details":
+        return WIKI_PDF.build_technical_details(
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            stamp_numbers=False,
+        )
+    if section == "menu":
+        return WIKI_PDF.build_menu(
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            page_number=0,
+            stamp_numbers=False,
+        )
+    if section == "special-thanks":
+        return WIKI_PDF.build_special_thanks(
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            page_numbers=(0, 0),
+            stamp_numbers=False,
+        )
+    if section == "contact":
+        return WIKI_PDF.build_contact(
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            page_number=0,
+            stamp_numbers=False,
+        )
+    raise SystemExit(f"ERROR: unsupported non-tool section '{section}'")
+
+
+def merge_or_copy(pdf_paths: list[Path], output_path: Path, *, verbose: bool) -> Path:
+    if not pdf_paths:
+        raise SystemExit("ERROR: no PDFs provided for merge.")
+    if len(pdf_paths) == 1:
+        shutil.copyfile(pdf_paths[0], output_path)
+        return output_path
+    return WIKI_PDF.merge_pdf_sequence(pdf_paths, output_path, verbose=verbose)
+
+
+def build_front_toc_entries(section_page_counts: dict[str, int]) -> list[tuple[str, int, int]]:
+    entries: list[tuple[str, int, int]] = []
+    current_page = 1
+    for section in FRONT_NON_TOOL_SECTIONS:
+        count = section_page_counts.get(section, 0)
+        if count <= 0:
+            continue
+        label = SECTION_TOC_LABELS.get(section)
+        if label is not None:
+            entries.append((label, current_page, 0))
+        current_page += count
+    return entries
+
+
+def tool_groups_for_categories(categories: list[str]) -> list[tuple[str, list[str]]]:
+    groups: list[tuple[str, list[str]]] = []
+    matched_categories: set[str] = set()
+
+    for entry in WIKI_PDF.load_full_nav():
+        title = WIKI_PDF.nav_entry_title(entry)
+        if title is None or title in WIKI_PDF.NON_TOOL_NAV_TITLES:
+            continue
+
+        if categories and not any(WIKI_PDF.nav_entry_contains_category(entry, category) for category in categories):
+            continue
+
+        docs = [
+            path
+            for path in WIKI_PDF.nav_leaf_doc_paths(next(iter(entry.values())))
+            if path.name != "index.md"
+        ]
+        if not docs:
+            continue
+
+        groups.append((title, [WIKI_PDF.first_markdown_heading(path) for path in docs]))
+        for category in categories:
+            if WIKI_PDF.nav_entry_contains_category(entry, category):
+                matched_categories.add(category)
+
+    missing_categories = [category for category in categories if category not in matched_categories]
+    if missing_categories:
+        missing_list = ", ".join(missing_categories)
+        raise SystemExit(
+            f"ERROR: no nav category matched {missing_list!r}. "
+            "Use a docs directory slug such as draw, filter, transform, 3d, cg, curves, or utilities."
+        )
+
+    return groups
+
+
+def output_path_for_selection(
+    output_dir: Path,
+    *,
+    version: str,
+    export_parts: list[str],
+    include_tool_pages: bool,
+    include_toc: bool,
+    tool_categories: list[str],
+) -> Path:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    version_label = normalize_version_label(version)
+    suffixes = filename_suffix_components(
+        export_parts=export_parts,
+        include_tool_pages=include_tool_pages,
+        include_toc=include_toc,
+        tool_categories=tool_categories,
+    )
+
+    stem = f"{timestamp}__{RELEASE_BASENAME}_{version_label}"
+    if suffixes:
+        stem = f"{stem}__{'__'.join(suffixes)}"
+    return unique_output_path(output_dir, stem)
+
+
+def build_non_tool_only(
+    *,
+    sections: list[str],
+    version: str,
+    output_path: Path,
+    playwright_python: str,
+    verbose: bool,
+) -> Path:
+    with tempfile.TemporaryDirectory(prefix="nst-export-pdf-sections.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        section_paths: list[Path] = []
+        for section in sections:
+            section_path = temp_dir / f"{section}.pdf"
+            print(f"Rendering section: {section}")
+            build_section_pdf(
+                section,
+                output_path=section_path,
+                version=version,
+                playwright_python=playwright_python,
+                verbose=verbose,
+            )
+            section_paths.append(section_path)
+
+        merge_or_copy(section_paths, output_path, verbose=verbose)
+
+    total_pages = WIKI_PDF.page_count(output_path)
+    print(f"Stamping page numbers (1-{total_pages})...")
+    return WIKI_PDF.stamp_page_numbers(
+        output_path,
+        first_page_index=1,
+        last_page_index=total_pages,
+        start_number=1,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
+
+
+def build_mixed_export(
+    *,
+    sections: list[str],
+    include_toc: bool,
+    tool_categories: list[str],
+    version: str,
+    output_path: Path,
+    playwright_python: str,
+    verbose: bool,
+) -> Path:
+    front_sections = [section for section in FRONT_NON_TOOL_SECTIONS if section in sections]
+    back_sections = [section for section in BACK_NON_TOOL_SECTIONS if section in sections]
+
+    with tempfile.TemporaryDirectory(prefix="nst-export-pdf-mixed.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+
+        section_paths: dict[str, Path] = {}
+        section_page_counts: dict[str, int] = {}
+        for section in sections:
+            section_path = temp_dir / f"{section}.pdf"
+            print(f"Rendering section: {section}")
+            build_section_pdf(
+                section,
+                output_path=section_path,
+                version=version,
+                playwright_python=playwright_python,
+                verbose=verbose,
+            )
+            section_paths[section] = section_path
+            section_page_counts[section] = WIKI_PDF.page_count(section_path)
+
+        front_paths = [section_paths[section] for section in front_sections]
+        back_paths = [section_paths[section] for section in back_sections]
+
+        tool_pages_pdf = temp_dir / "tool-pages.pdf"
+        print("Rendering tool pages without visible numbering...")
+        TOOL_PDF.build_tool_pages(
+            categories=tool_categories,
+            version=version,
+            output_path=tool_pages_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+            stamp_numbers=False,
+        )
+
+        merge_parts: list[Path] = []
+        front_pages = 0
+        paginated_toc_entries: list[list[dict]] | None = None
+        flat_toc_entries: list[tuple[str, int, int]] | None = None
+
+        if front_paths:
+            front_pdf = temp_dir / "front-sections.pdf"
+            merge_or_copy(front_paths, front_pdf, verbose=verbose)
+            merge_parts.append(front_pdf)
+            front_pages = WIKI_PDF.page_count(front_pdf)
+
+        if include_toc:
+            tool_pages = WIKI_PDF.pdf_pages_text(tool_pages_pdf)
+            tool_groups = tool_groups_for_categories(tool_categories)
+            tool_relative_page_map = {}
+            for _group_title, tool_titles in tool_groups:
+                for tool_title in tool_titles:
+                    tool_relative_page_map[tool_title] = WIKI_PDF.page_for_title(tool_title, tool_pages)
+
+            toc_pdf = temp_dir / "tool-index.pdf"
+            print("Rendering Tool Index...")
+            front_entries = build_front_toc_entries(section_page_counts)
+            _, _toc_pages, paginated_toc_entries, flat_toc_entries = WIKI_PDF.render_stable_toc_pdf(
+                front_pages=front_pages,
+                front_entries=front_entries,
+                tool_groups=tool_groups,
+                tool_relative_page_map=tool_relative_page_map,
+                output_path=toc_pdf,
+                playwright_python=playwright_python,
+                verbose=verbose,
+            )
+            merge_parts.append(toc_pdf)
+
+        merge_parts.append(tool_pages_pdf)
+
+        if back_paths:
+            back_pdf = temp_dir / "back-sections.pdf"
+            merge_or_copy(back_paths, back_pdf, verbose=verbose)
+            merge_parts.append(back_pdf)
+
+        merge_or_copy(merge_parts, output_path, verbose=verbose)
+
+        total_pages = WIKI_PDF.page_count(output_path)
+        print(f"Stamping page numbers (1-{total_pages})...")
+        WIKI_PDF.stamp_page_numbers(
+            output_path,
+            first_page_index=1,
+            last_page_index=total_pages,
+            start_number=1,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+
+        if paginated_toc_entries is None or flat_toc_entries is None:
+            return output_path
+
+        return WIKI_PDF.add_toc_links_and_outline(
+            pdf_path=output_path,
+            spec=WIKI_PDF.build_toc_link_spec(
+                toc_start_page_number=front_pages + 1,
+                paginated_entries=paginated_toc_entries,
+                flat_entries=flat_toc_entries,
+            ),
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+
+
+def main() -> int:
+    args = parse_args()
+    export_parts, sections, include_tool_pages, include_toc, tool_categories = resolve_selection(args)
+
+    output_dir = resolve_output_dir(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_path_for_selection(
+        output_dir,
+        version=args.version,
+        export_parts=export_parts,
+        include_tool_pages=include_tool_pages,
+        include_toc=include_toc,
+        tool_categories=tool_categories,
+    )
+
+    playwright_python = WIKI_PDF.find_playwright_python()
+
+    print(f"Preset: {args.mode}")
+    print(f"Export parts: {', '.join(export_parts)}")
+    print(f"Non-tool sections: {', '.join(sections) if sections else 'none'}")
+    print(f"Tool Index: {'yes' if include_toc else 'no'}")
+    print(f"Tool categories: {', '.join(tool_categories) if tool_categories else 'all'}")
+    print(f"Output: {output_path}")
+
+    if include_tool_pages and not sections and not include_toc:
+        print("Rendering tool pages only...")
+        TOOL_PDF.build_tool_pages(
+            categories=tool_categories,
+            version=args.version,
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=args.verbose,
+            stamp_numbers=True,
+        )
+    elif not include_tool_pages:
+        build_non_tool_only(
+            sections=sections,
+            version=args.version,
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=args.verbose,
+        )
+    else:
+        build_mixed_export(
+            sections=sections,
+            include_toc=include_toc,
+            tool_categories=tool_categories,
+            version=args.version,
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=args.verbose,
+        )
+
+    if args.open:
+        WIKI_PDF.open_pdf(output_path)
+
+    print(f"Finished: {output_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Offline PDF reference asset at `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf`.
 - Local font assets under `documentation/docs/assets/fonts/` for Lato, JetBrains Mono, and Titillium Web.
 - PDF export source files for browser rendering under `documentation/mkdocs.pdf.yml`, `documentation/scripts/`, `documentation/templates/`, and `documentation/docs/css/`.
+- Public root-level `./export_pdf` entrypoint that defaults to the full wiki PDF while exposing section/category filtering through one command.
 - Root-level `make_wiki_pdf` entrypoint for section-based local PDF builds, with current `cover`, `about-installation`, `technical-details`, `menu`, `contact`, `special-thanks`, `pages-1-2`, `pages-1-5`, and `full-so-far` targets plus versioned review artifacts under `/tmp/nst-wiki-pdf/`.
 - Dedicated PDF templates for the Technical Details, Contact, and Special Thanks slices under `documentation/templates/`.
 - PDF cover source asset at `documentation/docs/img/pdf/NukeSurvivalToolkit_Splashpage_cover.jpg`.
@@ -65,6 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a merged `full-wiki` PDF path that preserves the approved `full-so-far` main-page render as truth, builds tool pages separately, then combines front main pages, tool pages, and end matter before stamping one consecutive page-number sequence across the merged result.
 - Returned `make_tool_pages_pdf` to a tool-only build path while keeping category-limited subset renders for review and exposing an internal no-page-number mode for merged-PDF assembly.
 - Updated `full-wiki` to insert a generated `Tool Index` PDF between the main pages and tool pages, resolve its page numbers from the rendered tool-pages PDF, and inject matching bookmark/sidebar navigation into the finished document.
+- Consolidated the public PDF workflow around `./export_pdf` so users no longer need to learn separate entrypoint scripts for full, tool-only, or filtered exports.
+- Updated `./export_pdf` to default generated PDFs into repo-local `output/pdf/` and use unique date-stamped release-style filenames with optional subset suffixes.
 - Updated the docs home page release label to `v2.2.0`.
 
 ### Fixed

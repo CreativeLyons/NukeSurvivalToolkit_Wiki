@@ -59,37 +59,31 @@ Releases:
 
 ## C. Offline PDF Build (Local, Not Versioned)
 
-The main PDF entrypoint for this repo is the root-level Python script `./make_wiki_pdf`.
-Its purpose is to generate the printable PDF documentation from the wiki source, first as approved section builds and eventually as the complete assembled PDF book.
+The public PDF entrypoint for this repo is the root-level script `./export_pdf`.
+By default it exports the `full-wiki` preset. The older `./make_wiki_pdf` and `./make_tool_pages_pdf` scripts still exist, but they are now internal builder plumbing behind `./export_pdf` rather than the main user-facing interface.
+Generated PDFs now go to repo-local `output/pdf/` by default. Use `--output-dir` to override that destination with a relative or absolute path.
 
-Current implemented targets:
+Common examples:
 
-- `cover`
-- `about-installation`
-- `technical-details`
-- `menu`
-- `contact`
-- `special-thanks`
-- `pages-1-2`
-- `pages-1-5`
-- `full-so-far`
-- `full-wiki`
+- `./export_pdf`
+- `./export_pdf full-wiki`
+- `./export_pdf tools-only`
+- `./export_pdf non-tools-only`
+- `./export_pdf --sections cover,about-installation,technical-specs,menu`
+- `./export_pdf --sections toc,tool-pages --tool-category draw --tool-category filter`
+- `./export_pdf --sections cover,menu,toc,tool-pages,special-thanks,contacts --tool-category draw`
+- `./export_pdf --output-dir /tmp/nst-pdf-checks`
 
-The content-backed slice targets now render from the wiki markdown source (`intro.md`, `techSpecs.md`, `menus.md`, `special-thanks.md`, `contact.md`) so the wiki and the printable subset builds stay aligned while preserving the approved PDF shell. `about-installation` keeps its approved front-matter styling, but its content now comes from `intro.md`.
+Selection rules:
 
-The older `page2` target name still works as a legacy alias, but `about-installation` is now the canonical name.
+- Presets: `full-wiki`, `tools-only`, and `non-tools-only`.
+- Export parts: `cover`, `about-installation`, `technical-specs`, `menu`, `toc`, `tool-pages`, `special-thanks`, and `contacts`.
+- Use `--sections` to override the preset and build exactly the listed parts.
+- `toc` is only valid when `tool-pages` is also selected.
+- Use `--tool-category` to limit tool pages to specific category slugs such as `draw`, `filter`, `transform`, `3d`, `cg`, `curves`, or `utilities`.
+- Filenames use `YYYYMMDD_HHMMSS__NukeSurvivalToolkit_Documentation_Release_vX.Y.Z[__suffix].pdf`.
 
-The finished review PDFs now receive page numbers in one final stamping pass, so the cover and interior pages share the same numbering position.
-
-The merged full-book path now keeps the approved main pages and the tool pages as separate sources of truth:
-
-- `./make_wiki_pdf full-so-far` remains the approved non-tool main-page review build.
-- `./make_tool_pages_pdf tool-pages` remains the tool-pages-only build path.
-- `./make_wiki_pdf full-wiki` builds both outputs separately, inserts a generated `Tool Index`, merges them as front main pages -> Tool Index -> tool pages -> Special Thanks / Contact, stamps one consecutive page-number sequence across the merged result, and injects clickable TOC links plus PDF sidebar bookmarks into the finished file.
-
-For faster tool-page iteration, `./make_tool_pages_pdf tool-pages` still supports `--category` flags to render one or more tool menus without touching the approved main-page build path.
-
-For faster full-book TOC/layout validation, `./make_wiki_pdf full-wiki --category draw` keeps the approved main pages and generated Tool Index, but limits the rendered tool section to a single tool category.
+The content-backed PDF sections render from the wiki markdown source (`intro.md`, `techSpecs.md`, `menus.md`, `special-thanks.md`, `contact.md`) so the wiki and printable outputs stay aligned while preserving the approved PDF shell. Finished PDFs receive page numbers in one final stamping pass, and mixed/full exports with tool pages also generate a clickable `Tool Index` plus PDF sidebar bookmarks.
 
 Requirements:
 

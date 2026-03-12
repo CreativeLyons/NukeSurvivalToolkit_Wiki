@@ -42,21 +42,14 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 
 ### Main entrypoint
 
-- The main repo-visible PDF entrypoint is `./make_wiki_pdf` at the repository root.
-- The script is intentionally target-based so each approved section can be rebuilt without touching the rest of the book.
-- Current implemented targets:
-  - `cover`
-  - `about-installation`
-  - `technical-details`
-  - `menu`
-  - `contact`
-  - `special-thanks`
-  - `pages-1-2`
-  - `pages-1-5`
-  - `full-so-far`
-  - `full-wiki`
-- Output defaults to `/tmp/nst-wiki-pdf/`.
-- The reviewed combined artifact naming scheme is `nst_wiki_vN.pdf`.
+- The main repo-visible PDF entrypoint is `./export_pdf` at the repository root.
+- `./export_pdf` defaults to the `full-wiki` preset and exposes the supported user-facing selection controls:
+  - presets: `full-wiki`, `tools-only`, `non-tools-only`
+  - parts via `--sections`: `cover`, `about-installation`, `technical-specs`, `menu`, `toc`, `tool-pages`, `special-thanks`, `contacts`
+  - tool filtering via `--tool-category`
+- The existing `./make_wiki_pdf` and `./make_tool_pages_pdf` scripts remain in the repo as internal builder plumbing behind `./export_pdf`.
+- Output defaults to repo-local `output/pdf/`, with `--output-dir` available as an override.
+- Generated filenames follow `YYYYMMDD_HHMMSS__NukeSurvivalToolkit_Documentation_Release_vX.Y.Z[__suffix].pdf`.
 - The older `documentation/scripts/build_pdf.sh` path remains useful for full-book experiments, but the section-by-section workflow should be built out through `./make_wiki_pdf`.
 
 ### Current approved slice
