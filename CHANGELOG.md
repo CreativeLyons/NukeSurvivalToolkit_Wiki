@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Offline build plugins (`offline`, `privacy`) in `documentation/mkdocs.offline.yml` to support local `file://` search and bundled external assets.
 - Standalone `documentation/docs/special-thanks.md` and `documentation/docs/contact.md` pages so those wiki sections can also be targeted directly in the PDF slice workflow.
 - `documentation/scripts/stamp_pdf_page_numbers.py` plus the `pypdf` dependency so the finished approved-subset PDFs can receive one consistent post-render page-number treatment.
+- `documentation/scripts/add_pdf_toc_links.py` so the merged `full-wiki` PDF can receive clickable Tool Index links and bookmark-outline navigation after the final merge.
+- `./make_wiki_pdf full-wiki --category <slug>` for faster TOC and layout validation against a single tool menu while keeping the front matter, generated Tool Index, and end matter in place.
 
 ### Changed
 
@@ -62,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced per-template HTML footer numbering with one shared post-render PDF-numbering pass so the cover and all interior approved pages use the same visible number placement.
 - Added a merged `full-wiki` PDF path that preserves the approved `full-so-far` main-page render as truth, builds tool pages separately, then combines front main pages, tool pages, and end matter before stamping one consecutive page-number sequence across the merged result.
 - Returned `make_tool_pages_pdf` to a tool-only build path while keeping category-limited subset renders for review and exposing an internal no-page-number mode for merged-PDF assembly.
+- Updated `full-wiki` to insert a generated `Tool Index` PDF between the main pages and tool pages, resolve its page numbers from the rendered tool-pages PDF, and inject matching bookmark/sidebar navigation into the finished document.
 - Updated the docs home page release label to `v2.2.0`.
 
 ### Fixed
@@ -73,6 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed PDF cover softness by using the committed JPEG cover source instead of regenerating a low-resolution temporary cover image.
 - Fixed inconsistent approved-subset page number placement by stamping the final PDFs after render instead of relying on template-specific HTML placement.
 - Fixed forced blank space in the `technical-details` review pages by allowing the markdown-derived content to paginate naturally before extracting the approved slice.
+- Fixed stale `bm_Lightwrap` nav paths in the online, offline, and PDF MkDocs configs so the generated Tool Index can scan the full nav without hitting missing markdown files.
+- Fixed `full-wiki` Tool Index grouping so `Special Thanks` and `Contact` stay in back matter and are not searched inside the tool-pages PDF.
 
 ### Removed
 

@@ -122,7 +122,7 @@ nav:
         - Highpass: filter/highpass.md
         - Diffusion: filter/diffusion.md
         - LightWrapPro: filter/lightwrap-pro.md
-        - bm_Lightwrap: filter/bm-lightwrap.md
+        - bm_Lightwrap: filter/bm-optical-lightwrap.md
         - iConvolve: filter/iconvolve.md
         - ConvolutionMatrix: filter/convolution-matrix.md
         - apChroma: filter/apchroma.md

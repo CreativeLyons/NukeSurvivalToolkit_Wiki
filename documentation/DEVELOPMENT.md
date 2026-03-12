@@ -158,6 +158,7 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - The tracked `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf` file is the original reference PDF, not a generated test iteration.
 - The current combined review target is `full-so-far`, which assembles cover, page 2, Technical Details, Menus, Special Thanks, and Contact into one local review PDF.
 - The current merged full-book target is `full-wiki`, which preserves the approved main-page build as truth and inserts the separately rendered tool-pages PDF between the front main pages and the end matter.
+- `./make_wiki_pdf full-wiki --category <slug>` now supports reduced TOC/layout runs while keeping the front matter and end matter in the build.
 - `make_wiki_pdf` currently depends on:
   - Playwright-capable Python
   - `pypdf`
@@ -173,10 +174,24 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
   - `about-installation`
   - `technical-details`
   - `menu`
+  - generated `Tool Index`
   - all tool pages from `make_tool_pages_pdf`
   - `special-thanks`
   - `contact`
 - The merged `full-wiki` flow stamps page numbers once, after merge, so the final numbering belongs to the combined result rather than the old `full-so-far` sequence.
+- The generated `Tool Index` is built from the MkDocs nav plus the first H1 from each tool markdown page. The script resolves the actual destination pages from the rendered tool-pages PDF using `pdftotext`, then rerenders the TOC until its own page count stabilizes.
+- After the final merged PDF is stamped, `make_wiki_pdf` runs:
+  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/scripts/add_pdf_toc_links.py`
+  to inject clickable TOC rectangles and PDF bookmark-outline entries.
+- Verified full-book TOC run on March 12, 2026:
+  - `./make_wiki_pdf full-wiki --artifact-version 20260312`
+  - output: `459` pages
+  - size: `166.8 MB`
+  - wall time: `4 min 16.90 sec`
+  - outline items: `260`
+  - link annotations: `948`
+- A stale nav reference to `filter/bm-lightwrap.md` blocked the first full TOC run. The MkDocs configs now point to `filter/bm-optical-lightwrap.md`, which matches the renamed markdown file.
+- Back matter (`Special Thanks`, `Contact`) must stay out of the tool-group TOC scan; otherwise the TOC resolver will incorrectly search for those titles inside the tool-pages PDF.
 
 ### AI Handoff Files (2026-03-12)
 

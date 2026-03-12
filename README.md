@@ -85,15 +85,17 @@ The merged full-book path now keeps the approved main pages and the tool pages a
 
 - `./make_wiki_pdf full-so-far` remains the approved non-tool main-page review build.
 - `./make_tool_pages_pdf tool-pages` remains the tool-pages-only build path.
-- `./make_wiki_pdf full-wiki` builds both outputs separately, merges them as front main pages -> tool pages -> Special Thanks / Contact, and then stamps one consecutive page-number sequence across the merged result.
+- `./make_wiki_pdf full-wiki` builds both outputs separately, inserts a generated `Tool Index`, merges them as front main pages -> Tool Index -> tool pages -> Special Thanks / Contact, stamps one consecutive page-number sequence across the merged result, and injects clickable TOC links plus PDF sidebar bookmarks into the finished file.
 
 For faster tool-page iteration, `./make_tool_pages_pdf tool-pages` still supports `--category` flags to render one or more tool menus without touching the approved main-page build path.
+
+For faster full-book TOC/layout validation, `./make_wiki_pdf full-wiki --category draw` keeps the approved main pages and generated Tool Index, but limits the rendered tool section to a single tool category.
 
 Requirements:
 
 - Google Chrome installed locally
 - A Python interpreter with `playwright` available
-- Python packages from `documentation/requirements-pdf.txt` (includes `pypdf` for final page-number stamping)
+- Python packages from `documentation/requirements-pdf.txt` (includes `pypdf` for final page-number stamping and Tool Index link injection)
 - Poppler CLI tools `pdfinfo`, `pdfseparate`, and `pdfunite` available on `PATH`
 
 Generated PDFs are local build artifacts for inspection and should not be committed.

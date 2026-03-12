@@ -20,6 +20,7 @@ content from the wiki markdown files under documentation/docs/.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -54,6 +55,28 @@ TECHNICAL_DETAILS_DOC = DOC_ROOT / "docs" / "techSpecs.md"
 MENU_DOC = DOC_ROOT / "docs" / "menus.md"
 SPECIAL_THANKS_DOC = DOC_ROOT / "docs" / "special-thanks.md"
 CONTACT_DOC = DOC_ROOT / "docs" / "contact.md"
+FRONT_MATTER_NAV_TITLES = ("Home", "Intro", "Tech Specs", "Menus")
+BACK_MATTER_NAV_TITLES = ("Special Thanks", "Contact")
+NON_TOOL_NAV_TITLES = FRONT_MATTER_NAV_TITLES + BACK_MATTER_NAV_TITLES
+PT_PER_MM = 72 / 25.4
+PT_PER_CSS_PX = 72 / 96
+PDF_LETTER_WIDTH_PT = 612.0
+PDF_LETTER_HEIGHT_PT = 792.0
+TOC_MARGIN_TOP_PT = 16 * PT_PER_MM
+TOC_MARGIN_RIGHT_PT = 10 * PT_PER_MM
+TOC_MARGIN_BOTTOM_PT = 12 * PT_PER_MM
+TOC_MARGIN_LEFT_PT = 10 * PT_PER_MM
+TOC_SIDE_PADDING_PT = 62 * PT_PER_CSS_PX
+TOC_CONTENT_LEFT_PT = TOC_MARGIN_LEFT_PT + TOC_SIDE_PADDING_PT
+TOC_CONTENT_RIGHT_PT = PDF_LETTER_WIDTH_PT - TOC_MARGIN_RIGHT_PT - TOC_SIDE_PADDING_PT
+TOC_LEVEL1_INDENT_PT = 18 * PT_PER_CSS_PX
+TOC_PAGE_NUMBER_COLUMN_WIDTH_PT = 32 * PT_PER_CSS_PX
+TOC_COLUMN_GAP_PT = 12.0
+TOC_TITLE_LINE_HEIGHT_PT = 31.2
+TOC_TITLE_MARGIN_BOTTOM_PT = 10.4
+TOC_ROW_HEIGHT_PT = 14.74
+TOC_LEVEL0_SECTION_GAP_PT = 2.42
+TOC_LINK_PAD_Y_PT = 1.0
 INTERIOR_PAGE_MARGIN = "16mm 10mm 12mm 10mm"
 INTERIOR_TEXT_SIDE_PADDING = "62px"
 INTERIOR_FONT_FAMILY = '"Helvetica Neue", "Helvetica", "Arial", sans-serif'
@@ -75,6 +98,7 @@ STAMP_PAGE_NUMBER_FONT_NAME = "Helvetica"
 STAMP_PAGE_NUMBER_FONT_SIZE_PT = "11.04"
 STAMP_PAGE_NUMBER_RIGHT_GAP_PT = "33.0"
 STAMP_PAGE_NUMBER_BOTTOM_GAP_PT = "14.0"
+ADD_PDF_TOC_LINKS_SCRIPT = DOC_ROOT / "scripts" / "add_pdf_toc_links.py"
 ABOUT_INSTALLATION_TARGET = "about-installation"
 LEGACY_ABOUT_INSTALLATION_ALIAS = "page2"
 PLANNED_TARGETS = (
@@ -100,6 +124,15 @@ def parse_args() -> argparse.Namespace:
             "technical-details, contact, special-thanks, pages-1-2, "
             "pages-1-5, full-so-far, full-wiki, menu. Legacy alias still accepted: page2. "
             "Planned later: main-sections, tool-pages."
+        ),
+    )
+    parser.add_argument(
+        "--category",
+        default=None,
+        metavar="NAME",
+        help=(
+            "Limit the full-wiki build to one tool category while keeping the "
+            "main pages and generated TOC. Example: draw."
         ),
     )
     parser.add_argument("--version", default=DEFAULT_VERSION, help="Release string for the cover subtitle.")
@@ -177,6 +210,93 @@ def find_playwright_python() -> str:
 def load_base_config() -> dict:
     with MKDOCS_PDF_CONFIG.open("r", encoding="utf-8") as handle:
         return yaml.safe_load(handle)
+
+
+def load_full_nav() -> list:
+    """Return the full MkDocs nav used as the source of truth for TOC grouping."""
+    return load_base_config().get("nav", [])
+
+
+def nav_entry_title(entry) -> str | None:
+    """Return the display title for a single-entry MkDocs nav mapping."""
+    if isinstance(entry, dict) and len(entry) == 1:
+        return next(iter(entry))
+    return None
+
+
+def nav_entry_contains_category(entry, category: str) -> bool:
+    """Check whether a nav entry contains docs from the requested category slug."""
+    prefix = f"{category}/"
+
+    if isinstance(entry, str):
+        return entry.startswith(prefix) or entry == f"{category}/index.md"
+
+    if isinstance(entry, list):
+        return any(nav_entry_contains_category(child, category) for child in entry)
+
+    if isinstance(entry, dict):
+        return any(nav_entry_contains_category(value, category) for value in entry.values())
+
+    return False
+
+
+def nav_leaf_doc_paths(entry) -> list[Path]:
+    """Flatten a nested MkDocs nav entry into markdown file paths."""
+    if isinstance(entry, str):
+        return [(DOC_ROOT / "docs" / entry).resolve()]
+
+    if isinstance(entry, list):
+        paths = []
+        for child in entry:
+            paths.extend(nav_leaf_doc_paths(child))
+        return paths
+
+    if isinstance(entry, dict):
+        paths = []
+        for value in entry.values():
+            paths.extend(nav_leaf_doc_paths(value))
+        return paths
+
+    return []
+
+
+def first_markdown_heading(doc_path: Path) -> str:
+    """Read the first H1 from a markdown page for TOC and outline labels."""
+    for line in doc_path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("# "):
+            return line[2:].strip()
+    raise SystemExit(f"ERROR: no H1 heading found in {doc_path}")
+
+
+def tool_groups_for_toc(*, category: str | None) -> list[tuple[str, list[str]]]:
+    """Build grouped tool titles for the generated Tool Index."""
+    groups: list[tuple[str, list[str]]] = []
+    found_category = False
+
+    for entry in load_full_nav():
+        title = nav_entry_title(entry)
+        if title is None or title in NON_TOOL_NAV_TITLES:
+            continue
+        if category and not nav_entry_contains_category(entry, category):
+            continue
+
+        docs = [
+            path for path in nav_leaf_doc_paths(next(iter(entry.values())))
+            if path.name != "index.md"
+        ]
+        if not docs:
+            continue
+
+        groups.append((title, [first_markdown_heading(path) for path in docs]))
+        found_category = True
+
+    if category and not found_category:
+        raise SystemExit(
+            f"ERROR: no nav category matched '{category}'. "
+            "Use a docs directory slug such as draw, filter, transform, 3d, cg, curves, or utilities."
+        )
+
+    return groups
 
 
 def write_target_config(target_dir: Path, *, version: str, nav: list[dict[str, str]]) -> Path:
@@ -358,6 +478,319 @@ def page_count(pdf_path: Path) -> int:
         if line.startswith("Pages:"):
             return int(line.split(":", 1)[1].strip())
     raise SystemExit(f"ERROR: could not determine page count for {pdf_path}")
+
+
+def normalize_text(text: str) -> str:
+    """Collapse extracted PDF text to a whitespace-normalized form."""
+    return " ".join(text.split())
+
+
+def pdf_pages_text(pdf_path: Path) -> list[str]:
+    """Extract normalized text per page from a rendered PDF."""
+    raw = subprocess.check_output(["pdftotext", str(pdf_path), "-"], stderr=subprocess.DEVNULL)
+    return [normalize_text(page) for page in raw.decode("utf-8", errors="ignore").split("\f")]
+
+
+def page_for_title(title: str, pages: list[str]) -> int:
+    """Locate the first PDF page containing the requested title text."""
+    needle = normalize_text(title)
+    for index, page in enumerate(pages, start=1):
+        if needle and needle in page:
+            return index
+    raise SystemExit(f"ERROR: could not locate '{title}' in rendered tool pages PDF.")
+
+
+def build_tool_pages_pdf(
+    *,
+    category: str | None,
+    version: str,
+    output_path: Path,
+    verbose: bool,
+) -> Path:
+    """Render the tool-pages PDF in reusable no-page-number mode."""
+    cmd = [
+        sys.executable,
+        str(TOOL_PAGES_SCRIPT),
+        "tool-pages",
+        "--version",
+        version,
+        "--artifact-version",
+        "1",
+        "--output-dir",
+        str(output_path.parent),
+        "--no-page-numbers",
+    ]
+    if category:
+        cmd.extend(["--category", category])
+    if verbose:
+        cmd.append("--verbose")
+
+    run(cmd, stdout=None if verbose else subprocess.DEVNULL, stderr=None if verbose else subprocess.DEVNULL)
+
+    built_path = output_path.parent / f"nst_wiki_tool_pages{'-' + category if category else ''}_v1.pdf"
+    if built_path != output_path:
+        shutil.copyfile(built_path, output_path)
+    return output_path
+
+
+def paginate_toc_entries(entries: list[tuple[str, int, int]]) -> list[list[dict]]:
+    """Lay out Tool Index entries into stable PDF pages."""
+    pages: list[list[dict]] = []
+    current: list[dict] = []
+    current_y = TOC_MARGIN_TOP_PT + TOC_TITLE_LINE_HEIGHT_PT + TOC_TITLE_MARGIN_BOTTOM_PT
+    max_y = PDF_LETTER_HEIGHT_PT - TOC_MARGIN_BOTTOM_PT
+
+    for label, page, level in entries:
+        section_gap = TOC_LEVEL0_SECTION_GAP_PT if level == 0 and current else 0.0
+        needed = section_gap + TOC_ROW_HEIGHT_PT
+        if current_y + needed > max_y:
+            pages.append(current)
+            current = []
+            current_y = TOC_MARGIN_TOP_PT
+            section_gap = 0.0
+
+        y_top = current_y + section_gap
+        current.append(
+            {
+                "label": label,
+                "page": page,
+                "level": level,
+                "section_break": bool(section_gap),
+                "y_top_pt": y_top,
+                "y_bottom_pt": y_top + TOC_ROW_HEIGHT_PT,
+            }
+        )
+        current_y = y_top + TOC_ROW_HEIGHT_PT
+
+    if current:
+        pages.append(current)
+
+    return pages
+
+
+def toc_html(paginated_entries: list[list[dict]]) -> str:
+    """Render the generated Tool Index as standalone printable HTML."""
+    pages_html = []
+    for page_index, page_entries in enumerate(paginated_entries):
+        rows = []
+        for entry in page_entries:
+            classes = [f"level-{entry['level']}"]
+            if entry["section_break"]:
+                classes.append("section-break")
+            rows.append(
+                f'<div class="toc-entry {" ".join(classes)}">'
+                f'<div class="toc-label">{entry["label"]}</div>'
+                f'<div class="toc-page">{entry["page"]}</div>'
+                "</div>"
+            )
+
+        heading = "<h1>Tool Index</h1>" if page_index == 0 else ""
+        pages_html.append("<section class=\"toc-sheet\">" + heading + "\n".join(rows) + "</section>")
+
+    body = "\n".join(pages_html)
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>NST Tool Index</title>
+<style>
+@page {{
+  size: Letter;
+  margin: {INTERIOR_PAGE_MARGIN};
+}}
+
+body {{
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: {INTERIOR_TEXT_COLOR};
+  font-family: {INTERIOR_FONT_FAMILY};
+  font-size: {INTERIOR_BASE_FONT_SIZE};
+  line-height: 1.34;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}}
+
+h1 {{
+  margin: {INTERIOR_H1_MARGIN};
+  color: {INTERIOR_TEXT_COLOR};
+  font-family: {INTERIOR_FONT_FAMILY};
+  font-size: {INTERIOR_H1_SIZE};
+  font-weight: 400;
+  line-height: {TOC_TITLE_LINE_HEIGHT_PT}pt;
+}}
+
+.toc-sheet {{
+  box-sizing: border-box;
+  height: 251.4mm;
+  padding: 0 62px;
+  page-break-after: always;
+}}
+
+.toc-sheet:last-child {{
+  page-break-after: auto;
+}}
+
+.toc-entry {{
+  display: grid;
+  grid-template-columns: 1fr {TOC_PAGE_NUMBER_COLUMN_WIDTH_PT}pt;
+  column-gap: {TOC_COLUMN_GAP_PT}pt;
+  margin: 0;
+  height: {TOC_ROW_HEIGHT_PT}pt;
+  line-height: {TOC_ROW_HEIGHT_PT}pt;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  white-space: nowrap;
+}}
+
+.toc-entry.level-0.section-break {{
+  margin-top: {TOC_LEVEL0_SECTION_GAP_PT}pt;
+}}
+
+.toc-entry.level-1 {{
+  padding-left: {TOC_LEVEL1_INDENT_PT}pt;
+  font-size: 10.6pt;
+}}
+
+.toc-label {{
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}}
+
+.toc-page {{
+  text-align: right;
+}}
+</style>
+</head>
+<body>
+  {body}
+</body>
+</html>
+"""
+
+
+def front_matter_toc_entries(*, menu_page_number: int) -> list[tuple[str, int, int]]:
+    """Return fixed TOC entries for the non-tool front matter pages."""
+    return [
+        ("About", 2, 0),
+        ("Installation", 2, 0),
+        ("Technical Details", TECHNICAL_DETAILS_PAGE_START, 0),
+        ("Menus", menu_page_number, 0),
+    ]
+
+
+def add_toc_links_and_outline(
+    *,
+    pdf_path: Path,
+    spec: dict,
+    playwright_python: str,
+    verbose: bool,
+) -> Path:
+    """Inject clickable TOC links and bookmark outline data into the final PDF."""
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-toc-links.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        spec_path = temp_dir / "toc-links.json"
+        linked_output_path = temp_dir / "linked.pdf"
+        spec_path.write_text(json.dumps(spec, indent=2), encoding="utf-8")
+        run(
+            [
+                playwright_python,
+                str(ADD_PDF_TOC_LINKS_SCRIPT),
+                "--input",
+                str(pdf_path),
+                "--output",
+                str(linked_output_path),
+                "--spec",
+                str(spec_path),
+            ],
+            stdout=None if verbose else subprocess.DEVNULL,
+            stderr=None if verbose else subprocess.DEVNULL,
+        )
+        shutil.move(str(linked_output_path), str(pdf_path))
+    return pdf_path
+
+
+def render_stable_toc_pdf(
+    *,
+    front_pages: int,
+    front_entries: list[tuple[str, int, int]],
+    tool_groups: list[tuple[str, list[str]]],
+    tool_relative_page_map: dict[str, int],
+    output_path: Path,
+    playwright_python: str,
+    verbose: bool,
+) -> tuple[Path, int, list[list[dict]], list[tuple[str, int, int]]]:
+    """Render the Tool Index repeatedly until its own page count stabilizes."""
+    estimated_toc_pages = 1
+
+    for _ in range(4):
+        tool_page_offset = front_pages + estimated_toc_pages
+        entries = list(front_entries)
+        for category_title, tool_titles in tool_groups:
+            first_tool_title = tool_titles[0]
+            entries.append((category_title, tool_page_offset + tool_relative_page_map[first_tool_title], 0))
+            for tool_title in tool_titles:
+                entries.append((tool_title, tool_page_offset + tool_relative_page_map[tool_title], 1))
+
+        paginated_entries = paginate_toc_entries(entries)
+        render_standalone_html(
+            toc_html(paginated_entries),
+            temp_prefix="nst-make-wiki-toc.",
+            filename="toc.html",
+            output_path=output_path,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+        toc_pages = page_count(output_path)
+        if toc_pages == len(paginated_entries) == estimated_toc_pages:
+            return output_path, toc_pages, paginated_entries, entries
+        estimated_toc_pages = toc_pages
+
+    raise SystemExit("ERROR: TOC page count did not stabilize after repeated renders.")
+
+
+def toc_link_rect(entry: dict) -> list[float]:
+    """Convert a Tool Index row into a PDF link rectangle."""
+    indent = TOC_LEVEL1_INDENT_PT if entry["level"] == 1 else 0.0
+    x1 = TOC_CONTENT_LEFT_PT + indent
+    x2 = TOC_CONTENT_RIGHT_PT
+    y1 = PDF_LETTER_HEIGHT_PT - entry["y_bottom_pt"] - TOC_LINK_PAD_Y_PT
+    y2 = PDF_LETTER_HEIGHT_PT - entry["y_top_pt"] + TOC_LINK_PAD_Y_PT
+    return [round(x1, 3), round(y1, 3), round(x2, 3), round(y2, 3)]
+
+
+def build_toc_link_spec(
+    *,
+    toc_start_page_number: int,
+    paginated_entries: list[list[dict]],
+    flat_entries: list[tuple[str, int, int]],
+) -> dict:
+    """Build the PDF link and outline spec for the generated Tool Index."""
+    links = []
+    outline = []
+
+    for toc_page_offset, page_entries in enumerate(paginated_entries):
+        source_page_number = toc_start_page_number + toc_page_offset
+        for entry in page_entries:
+            links.append(
+                {
+                    "source_page_number": source_page_number,
+                    "dest_page_number": entry["page"],
+                    "rect": toc_link_rect(entry),
+                }
+            )
+
+    for label, page_number, level in flat_entries:
+        outline.append(
+            {
+                "title": label,
+                "page_number": page_number,
+                "level": level,
+            }
+        )
+
+    return {"links": links, "outline": outline}
 
 
 def extract_pdf_pages(
@@ -1243,10 +1676,18 @@ def build_full_so_far(*, version: str, output_path: Path, playwright_python: str
     return output_path
 
 
-def build_full_wiki(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+def build_full_wiki(
+    *,
+    version: str,
+    output_path: Path,
+    playwright_python: str,
+    verbose: bool,
+    category: str | None = None,
+) -> Path:
     with tempfile.TemporaryDirectory(prefix="nst-make-wiki-full-wiki.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         front_main_pdf = temp_dir / "front-main.pdf"
+        toc_pdf = temp_dir / "toc.pdf"
         tool_pages_pdf = temp_dir / "tool-pages.pdf"
         back_main_pdf = temp_dir / "back-main.pdf"
         cover_pdf = temp_dir / "cover.pdf"
@@ -1288,26 +1729,32 @@ def build_full_wiki(*, version: str, output_path: Path, playwright_python: str, 
             verbose=verbose,
         )
 
-        run(
-            [
-                sys.executable,
-                str(TOOL_PAGES_SCRIPT),
-                "tool-pages",
-                "--version",
-                version,
-                "--artifact-version",
-                "1",
-                "--output-dir",
-                str(temp_dir),
-                "--no-page-numbers",
-            ],
-            stdout=None if verbose else subprocess.DEVNULL,
-            stderr=None if verbose else subprocess.DEVNULL,
+        print("Rendering tool pages without visible numbering…")
+        build_tool_pages_pdf(
+            category=category,
+            version=version,
+            output_path=tool_pages_pdf,
+            verbose=verbose,
         )
-        built_tool_pages_pdf = temp_dir / "nst_wiki_tool_pages_v1.pdf"
-        if not built_tool_pages_pdf.is_file():
-            raise SystemExit(f"ERROR: tool-pages PDF was not created: {built_tool_pages_pdf}")
-        shutil.copyfile(built_tool_pages_pdf, tool_pages_pdf)
+
+        tool_pages = pdf_pages_text(tool_pages_pdf)
+        tool_groups = tool_groups_for_toc(category=category)
+        tool_relative_page_map = {}
+        for _group_title, tool_titles in tool_groups:
+            for tool_title in tool_titles:
+                tool_relative_page_map[tool_title] = page_for_title(tool_title, tool_pages)
+
+        front_pages = page_count(front_main_pdf)
+        print("Rendering TOC pages…")
+        _, toc_pages, paginated_toc_entries, flat_toc_entries = render_stable_toc_pdf(
+            front_pages=front_pages,
+            front_entries=front_matter_toc_entries(menu_page_number=front_pages),
+            tool_groups=tool_groups,
+            tool_relative_page_map=tool_relative_page_map,
+            output_path=toc_pdf,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
 
         build_special_thanks(
             output_path=special_thanks_pdf,
@@ -1330,13 +1777,13 @@ def build_full_wiki(*, version: str, output_path: Path, playwright_python: str, 
         )
 
         merge_pdf_sequence(
-            [front_main_pdf, tool_pages_pdf, back_main_pdf],
+            [front_main_pdf, toc_pdf, tool_pages_pdf, back_main_pdf],
             output_path,
             verbose=verbose,
         )
 
     total_pages = page_count(output_path)
-    return stamp_page_numbers(
+    stamp_page_numbers(
         output_path,
         first_page_index=1,
         last_page_index=total_pages,
@@ -1344,9 +1791,19 @@ def build_full_wiki(*, version: str, output_path: Path, playwright_python: str, 
         playwright_python=playwright_python,
         verbose=verbose,
     )
+    return add_toc_links_and_outline(
+        pdf_path=output_path,
+        spec=build_toc_link_spec(
+            toc_start_page_number=front_pages + 1,
+            paginated_entries=paginated_toc_entries,
+            flat_entries=flat_toc_entries,
+        ),
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
 
 
-def output_path_for(target: str, output_dir: Path, *, artifact_version: int) -> Path:
+def output_path_for(target: str, output_dir: Path, *, artifact_version: int, category: str | None = None) -> Path:
     filename = {
         "cover": f"nst_wiki_cover_v{artifact_version}.pdf",
         ABOUT_INSTALLATION_TARGET: f"nst_wiki_about_installation_v{artifact_version}.pdf",
@@ -1356,7 +1813,10 @@ def output_path_for(target: str, output_dir: Path, *, artifact_version: int) -> 
         "pages-1-2": f"nst_wiki_v{artifact_version}.pdf",
         "pages-1-5": f"nst_wiki_v{artifact_version}.pdf",
         "full-so-far": f"nst_wiki_v{artifact_version}.pdf",
-        "full-wiki": f"nst_wiki_full_with_tools_v{artifact_version}.pdf",
+        "full-wiki": (
+            f"nst_wiki_full_with_tools-{category}_v{artifact_version}.pdf"
+            if category else f"nst_wiki_full_with_tools_v{artifact_version}.pdf"
+        ),
         "menu": f"nst_wiki_v{artifact_version}-menu.pdf",
     }[target]
     return output_dir / filename
@@ -1390,7 +1850,12 @@ def main() -> int:
         return 2
 
     playwright_python = find_playwright_python()
-    output_path = output_path_for(target, output_dir, artifact_version=args.artifact_version)
+    output_path = output_path_for(
+        target,
+        output_dir,
+        artifact_version=args.artifact_version,
+        category=args.category if target == "full-wiki" else None,
+    )
 
     if target == "cover":
         build_cover(
@@ -1441,6 +1906,7 @@ def main() -> int:
             output_path=output_path,
             playwright_python=playwright_python,
             verbose=args.verbose,
+            category=args.category,
         )
     else:
         build_full_so_far(
