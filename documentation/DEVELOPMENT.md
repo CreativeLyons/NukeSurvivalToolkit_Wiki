@@ -155,6 +155,7 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - `make_wiki_pdf` currently depends on:
   - Playwright-capable Python
   - `pypdf`
+  - Ghostscript for the default `./export_pdf` compressed sibling output
   - Poppler CLI tools `pdfinfo`, `pdfseparate`, and `pdfunite`
 
 ### Merged PDF assembly
@@ -176,6 +177,7 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - After the final merged PDF is stamped, `make_wiki_pdf` runs:
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/scripts/add_pdf_toc_links.py`
   to inject clickable TOC rectangles and PDF bookmark-outline entries.
+- `./export_pdf` now keeps that normal output and, by default, also writes a `__compressed.pdf` sibling via Ghostscript. The current recommended preset is tuned around `128 dpi` color/gray image downsampling with forced JPEG recompression. For mixed/full exports, the compressed sibling is generated from the stamped PDF and then receives its own TOC-link and bookmark injection pass so navigation survives the lossy rewrite.
 - Verified full-book TOC run on March 12, 2026:
   - `./make_wiki_pdf full-wiki --artifact-version 20260312`
   - output: `459` pages

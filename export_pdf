@@ -10,7 +10,9 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import shutil
+import subprocess
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
@@ -20,6 +22,10 @@ REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "output" / "pdf"
 DEFAULT_OUTPUT_DIR_LABEL = "output/pdf"
 RELEASE_BASENAME = "NukeSurvivalToolkit_Documentation_Release"
+COMPRESSION_PROFILE = "recommended"
+COMPRESSED_SUFFIX = "compressed"
+COMPRESSION_IMAGE_DPI = 128
+COMPRESSION_MONO_DPI = 150
 
 
 def load_script_module(name: str, path: Path):
@@ -34,6 +40,14 @@ def load_script_module(name: str, path: Path):
 
 WIKI_PDF = load_script_module("nst_make_wiki_pdf", REPO_ROOT / "make_wiki_pdf")
 TOOL_PDF = load_script_module("nst_make_tool_pages_pdf", REPO_ROOT / "make_tool_pages_pdf")
+
+
+@dataclass(frozen=True)
+class ExportResult:
+    """Paths produced by one export run."""
+
+    output_path: Path
+    compressed_output_path: Path | None = None
 
 EXPORT_PARTS = (
     "cover",
@@ -161,7 +175,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--open",
         action="store_true",
-        help="Open the output PDF after building.",
+        help="Open the compressed PDF after building when available; otherwise open the normal output.",
+    )
+    parser.add_argument(
+        "--no-compress",
+        action="store_true",
+        help="Skip the default Ghostscript compression step and emit only the normal PDF.",
     )
     parser.add_argument(
         "--verbose",
@@ -296,6 +315,176 @@ def unique_output_path(output_dir: Path, stem: str) -> Path:
         if not candidate.exists():
             return candidate
         index += 1
+
+
+def compressed_output_path_for(output_path: Path) -> Path:
+    """Return a unique sibling path for the compressed PDF artifact."""
+
+    return unique_output_path(output_path.parent, f"{output_path.stem}__{COMPRESSED_SUFFIX}")
+
+
+def ghostscript_binary() -> str | None:
+    """Return the Ghostscript executable on PATH, if available."""
+
+    return shutil.which("gs")
+
+
+def require_ghostscript() -> str:
+    """Return the Ghostscript executable or exit with an actionable error."""
+
+    gs = ghostscript_binary()
+    if gs is None:
+        raise SystemExit(
+            "ERROR: PDF compression is enabled by default, but Ghostscript ('gs') was not found on PATH. "
+            "Install Ghostscript locally or rerun with --no-compress."
+        )
+    return gs
+
+
+def format_file_size(size_bytes: int) -> str:
+    """Format a byte count using base-1024 units for console reporting."""
+
+    size = float(size_bytes)
+    units = ("B", "KB", "MB", "GB", "TB")
+    unit_index = 0
+    while size >= 1024 and unit_index < len(units) - 1:
+        size /= 1024
+        unit_index += 1
+    if unit_index == 0:
+        return f"{int(size)} {units[unit_index]}"
+    return f"{size:.1f} {units[unit_index]}"
+
+
+def compression_summary(before_bytes: int, after_bytes: int) -> str:
+    """Summarize the before/after size delta for a compression run."""
+
+    if before_bytes <= 0:
+        return f"{format_file_size(after_bytes)}"
+
+    delta = after_bytes - before_bytes
+    percent = abs(delta) / before_bytes * 100
+    if delta <= 0:
+        return (
+            f"{format_file_size(before_bytes)} -> {format_file_size(after_bytes)} "
+            f"({percent:.1f}% smaller)"
+        )
+    return (
+        f"{format_file_size(before_bytes)} -> {format_file_size(after_bytes)} "
+        f"({percent:.1f}% larger)"
+    )
+
+
+def compress_pdf(
+    source_path: Path,
+    output_path: Path,
+    *,
+    ghostscript_path: str,
+    verbose: bool,
+) -> Path:
+    """Rewrite a PDF through Ghostscript using the tuned local compression profile."""
+
+    # Force image recompression/downsampling for color and gray assets; in testing
+    # this was the biggest lever for matching the older iLovePDF size band.
+    command = [
+        ghostscript_path,
+        "-sDEVICE=pdfwrite",
+        "-dCompatibilityLevel=1.4",
+        "-dNOPAUSE",
+        "-dBATCH",
+        "-dSAFER",
+        "-dDetectDuplicateImages=true",
+        "-dCompressFonts=true",
+        "-dSubsetFonts=true",
+        "-dPDFSETTINGS=/screen",
+        "-dAutoRotatePages=/None",
+        "-dDownsampleColorImages=true",
+        "-dColorImageDownsampleType=/Bicubic",
+        f"-dColorImageResolution={COMPRESSION_IMAGE_DPI}",
+        "-dColorImageDownsampleThreshold=1.0",
+        "-dAutoFilterColorImages=false",
+        "-dColorImageFilter=/DCTEncode",
+        "-dDownsampleGrayImages=true",
+        "-dGrayImageDownsampleType=/Bicubic",
+        f"-dGrayImageResolution={COMPRESSION_IMAGE_DPI}",
+        "-dGrayImageDownsampleThreshold=1.0",
+        "-dAutoFilterGrayImages=false",
+        "-dGrayImageFilter=/DCTEncode",
+        "-dDownsampleMonoImages=true",
+        "-dMonoImageDownsampleType=/Subsample",
+        f"-dMonoImageResolution={COMPRESSION_MONO_DPI}",
+        f"-sOutputFile={output_path}",
+        str(source_path),
+    ]
+    if not verbose:
+        command.insert(5, "-dQUIET")
+
+    try:
+        subprocess.run(
+            command,
+            check=True,
+            stdout=None if verbose else subprocess.DEVNULL,
+            stderr=None if verbose else subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(
+            f"ERROR: Ghostscript compression failed for {source_path}. "
+            "The normal PDF output remains available."
+        ) from exc
+
+    return output_path
+
+
+def finalize_outputs(
+    *,
+    source_pdf_path: Path,
+    output_path: Path,
+    compressed_output_path: Path | None,
+    ghostscript_path: str | None,
+    toc_spec: dict | None,
+    playwright_python: str,
+    verbose: bool,
+) -> ExportResult:
+    """Write the normal PDF, optionally write the compressed sibling, and add TOC links."""
+
+    if source_pdf_path != output_path:
+        shutil.copyfile(source_pdf_path, output_path)
+
+    if toc_spec is not None:
+        WIKI_PDF.add_toc_links_and_outline(
+            pdf_path=output_path,
+            spec=toc_spec,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+
+    if compressed_output_path is None:
+        return ExportResult(output_path=output_path)
+
+    if ghostscript_path is None:
+        raise SystemExit("ERROR: internal error: compression requested without a Ghostscript binary.")
+
+    print(f"Compressing PDF ({COMPRESSION_PROFILE})...")
+    compress_pdf(
+        source_pdf_path,
+        compressed_output_path,
+        ghostscript_path=ghostscript_path,
+        verbose=verbose,
+    )
+
+    if toc_spec is not None:
+        # Add links after compression so they are not at the mercy of the lossy rewrite.
+        WIKI_PDF.add_toc_links_and_outline(
+            pdf_path=compressed_output_path,
+            spec=toc_spec,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+
+    before_bytes = source_pdf_path.stat().st_size
+    after_bytes = compressed_output_path.stat().st_size
+    print(f"Compressed output: {compressed_output_path}")
+    print(f"Compression result: {compression_summary(before_bytes, after_bytes)}")
+    return ExportResult(output_path=output_path, compressed_output_path=compressed_output_path)
 
 
 def build_section_pdf(
@@ -443,9 +632,11 @@ def build_non_tool_only(
     sections: list[str],
     version: str,
     output_path: Path,
+    compressed_output_path: Path | None,
+    ghostscript_path: str | None,
     playwright_python: str,
     verbose: bool,
-) -> Path:
+) -> ExportResult:
     with tempfile.TemporaryDirectory(prefix="nst-export-pdf-sections.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         section_paths: list[Path] = []
@@ -461,18 +652,28 @@ def build_non_tool_only(
             )
             section_paths.append(section_path)
 
-        merge_or_copy(section_paths, output_path, verbose=verbose)
+        merged_path = temp_dir / "merged.pdf"
+        merge_or_copy(section_paths, merged_path, verbose=verbose)
 
-    total_pages = WIKI_PDF.page_count(output_path)
-    print(f"Stamping page numbers (1-{total_pages})...")
-    return WIKI_PDF.stamp_page_numbers(
-        output_path,
-        first_page_index=1,
-        last_page_index=total_pages,
-        start_number=1,
-        playwright_python=playwright_python,
-        verbose=verbose,
-    )
+        total_pages = WIKI_PDF.page_count(merged_path)
+        print(f"Stamping page numbers (1-{total_pages})...")
+        WIKI_PDF.stamp_page_numbers(
+            merged_path,
+            first_page_index=1,
+            last_page_index=total_pages,
+            start_number=1,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+        return finalize_outputs(
+            source_pdf_path=merged_path,
+            output_path=output_path,
+            compressed_output_path=compressed_output_path,
+            ghostscript_path=ghostscript_path,
+            toc_spec=None,
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
 
 
 def build_mixed_export(
@@ -482,9 +683,11 @@ def build_mixed_export(
     tool_categories: list[str],
     version: str,
     output_path: Path,
+    compressed_output_path: Path | None,
+    ghostscript_path: str | None,
     playwright_python: str,
     verbose: bool,
-) -> Path:
+) -> ExportResult:
     front_sections = [section for section in FRONT_NON_TOOL_SECTIONS if section in sections]
     back_sections = [section for section in BACK_NON_TOOL_SECTIONS if section in sections]
 
@@ -560,12 +763,13 @@ def build_mixed_export(
             merge_or_copy(back_paths, back_pdf, verbose=verbose)
             merge_parts.append(back_pdf)
 
-        merge_or_copy(merge_parts, output_path, verbose=verbose)
+        merged_path = temp_dir / "merged.pdf"
+        merge_or_copy(merge_parts, merged_path, verbose=verbose)
 
-        total_pages = WIKI_PDF.page_count(output_path)
+        total_pages = WIKI_PDF.page_count(merged_path)
         print(f"Stamping page numbers (1-{total_pages})...")
         WIKI_PDF.stamp_page_numbers(
-            output_path,
+            merged_path,
             first_page_index=1,
             last_page_index=total_pages,
             start_number=1,
@@ -574,15 +778,27 @@ def build_mixed_export(
         )
 
         if paginated_toc_entries is None or flat_toc_entries is None:
-            return output_path
+            return finalize_outputs(
+                source_pdf_path=merged_path,
+                output_path=output_path,
+                compressed_output_path=compressed_output_path,
+                ghostscript_path=ghostscript_path,
+                toc_spec=None,
+                playwright_python=playwright_python,
+                verbose=verbose,
+            )
 
-        return WIKI_PDF.add_toc_links_and_outline(
-            pdf_path=output_path,
-            spec=WIKI_PDF.build_toc_link_spec(
-                toc_start_page_number=front_pages + 1,
-                paginated_entries=paginated_toc_entries,
-                flat_entries=flat_toc_entries,
-            ),
+        toc_spec = WIKI_PDF.build_toc_link_spec(
+            toc_start_page_number=front_pages + 1,
+            paginated_entries=paginated_toc_entries,
+            flat_entries=flat_toc_entries,
+        )
+        return finalize_outputs(
+            source_pdf_path=merged_path,
+            output_path=output_path,
+            compressed_output_path=compressed_output_path,
+            ghostscript_path=ghostscript_path,
+            toc_spec=toc_spec,
             playwright_python=playwright_python,
             verbose=verbose,
         )
@@ -602,6 +818,8 @@ def main() -> int:
         include_toc=include_toc,
         tool_categories=tool_categories,
     )
+    compressed_output_path = None if args.no_compress else compressed_output_path_for(output_path)
+    ghostscript_path = None if args.no_compress else require_ghostscript()
 
     playwright_python = WIKI_PDF.find_playwright_python()
 
@@ -611,7 +829,11 @@ def main() -> int:
     print(f"Tool Index: {'yes' if include_toc else 'no'}")
     print(f"Tool categories: {', '.join(tool_categories) if tool_categories else 'all'}")
     print(f"Output: {output_path}")
+    print(f"Compression: {'disabled' if args.no_compress else COMPRESSION_PROFILE}")
+    if compressed_output_path is not None:
+        print(f"Compressed Output: {compressed_output_path}")
 
+    result: ExportResult
     if include_tool_pages and not sections and not include_toc:
         print("Rendering tool pages only...")
         TOOL_PDF.build_tool_pages(
@@ -622,29 +844,44 @@ def main() -> int:
             verbose=args.verbose,
             stamp_numbers=True,
         )
+        result = finalize_outputs(
+            source_pdf_path=output_path,
+            output_path=output_path,
+            compressed_output_path=compressed_output_path,
+            ghostscript_path=ghostscript_path,
+            toc_spec=None,
+            playwright_python=playwright_python,
+            verbose=args.verbose,
+        )
     elif not include_tool_pages:
-        build_non_tool_only(
+        result = build_non_tool_only(
             sections=sections,
             version=args.version,
             output_path=output_path,
+            compressed_output_path=compressed_output_path,
+            ghostscript_path=ghostscript_path,
             playwright_python=playwright_python,
             verbose=args.verbose,
         )
     else:
-        build_mixed_export(
+        result = build_mixed_export(
             sections=sections,
             include_toc=include_toc,
             tool_categories=tool_categories,
             version=args.version,
             output_path=output_path,
+            compressed_output_path=compressed_output_path,
+            ghostscript_path=ghostscript_path,
             playwright_python=playwright_python,
             verbose=args.verbose,
         )
 
     if args.open:
-        WIKI_PDF.open_pdf(output_path)
+        WIKI_PDF.open_pdf(result.compressed_output_path or result.output_path)
 
-    print(f"Finished: {output_path}")
+    print(f"Finished: {result.output_path}")
+    if result.compressed_output_path is not None:
+        print(f"Finished (compressed): {result.compressed_output_path}")
     return 0
 
 

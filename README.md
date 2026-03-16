@@ -62,6 +62,7 @@ Releases:
 The public PDF entrypoint for this repo is the root-level script `./export_pdf`.
 By default it exports the `full-wiki` preset. The older `./make_wiki_pdf` and `./make_tool_pages_pdf` scripts still exist, but they are now internal builder plumbing behind `./export_pdf` rather than the main user-facing interface.
 Generated PDFs now go to repo-local `output/pdf/` by default. Use `--output-dir` to override that destination with a relative or absolute path.
+`./export_pdf` now keeps the normal PDF output and, by default, also writes a Ghostscript-compressed sibling PDF with a `__compressed.pdf` suffix. The current recommended preset is tuned around `128 dpi` image downsampling plus forced JPEG recompression. Use `--no-compress` to skip that post-processing step.
 
 Common examples:
 
@@ -69,6 +70,7 @@ Common examples:
 - `./export_pdf full-wiki`
 - `./export_pdf tools-only`
 - `./export_pdf non-tools-only`
+- `./export_pdf --no-compress`
 - `./export_pdf --sections cover,about-installation,technical-specs,menu`
 - `./export_pdf --sections toc,tool-pages --tool-category draw --tool-category filter`
 - `./export_pdf --sections cover,menu,toc,tool-pages,special-thanks,contacts --tool-category draw`
@@ -84,12 +86,14 @@ Selection rules:
 - Filenames use `YYYYMMDD_HHMMSS__NukeSurvivalToolkit_Documentation_Release_vX.Y.Z[__suffix].pdf`.
 
 The content-backed PDF sections render from the wiki markdown source (`intro.md`, `techSpecs.md`, `menus.md`, `special-thanks.md`, `contact.md`) so the wiki and printable outputs stay aligned while preserving the approved PDF shell. Finished PDFs receive page numbers in one final stamping pass, and mixed/full exports with tool pages also generate a clickable `Tool Index` plus PDF sidebar bookmarks.
+When compression is enabled, mixed/full exports compress the stamped PDF first and then inject Tool Index links and bookmarks into the compressed sibling so the release-style output keeps working navigation.
 
 Requirements:
 
 - Google Chrome installed locally
 - A Python interpreter with `playwright` available
 - Python packages from `documentation/requirements-pdf.txt` (includes `pypdf` for final page-number stamping and Tool Index link injection)
+- Ghostscript available on `PATH` for the default compression step
 - Poppler CLI tools `pdfinfo`, `pdfseparate`, and `pdfunite` available on `PATH`
 
 Generated PDFs are local build artifacts for inspection and should not be committed.

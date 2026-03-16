@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `documentation/scripts/stamp_pdf_page_numbers.py` plus the `pypdf` dependency so the finished approved-subset PDFs can receive one consistent post-render page-number treatment.
 - `documentation/scripts/add_pdf_toc_links.py` so the merged `full-wiki` PDF can receive clickable Tool Index links and bookmark-outline navigation after the final merge.
 - `./make_wiki_pdf full-wiki --category <slug>` for faster TOC and layout validation against a single tool menu while keeping the front matter, generated Tool Index, and end matter in place.
+- Default local Ghostscript compression in `./export_pdf`, which now keeps the normal PDF and also writes a `__compressed.pdf` sibling unless `--no-compress` is used.
 
 ### Changed
 
@@ -68,6 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `full-wiki` to insert a generated `Tool Index` PDF between the main pages and tool pages, resolve its page numbers from the rendered tool-pages PDF, and inject matching bookmark/sidebar navigation into the finished document.
 - Consolidated the public PDF workflow around `./export_pdf` so users no longer need to learn separate entrypoint scripts for full, tool-only, or filtered exports.
 - Updated `./export_pdf` to default generated PDFs into repo-local `output/pdf/` and use unique date-stamped release-style filenames with optional subset suffixes.
+- Tuned the default `./export_pdf` compression profile around `128 dpi` color/gray image downsampling with forced JPEG recompression, and updated `--open` to prefer the compressed sibling when one is generated.
+- Updated mixed/full PDF exports to compress the stamped PDF first and then reapply Tool Index links and bookmark-outline navigation to the compressed sibling so the release artifact keeps working navigation.
 - Updated the docs home page release label to `v2.2.0`.
 
 ### Fixed
