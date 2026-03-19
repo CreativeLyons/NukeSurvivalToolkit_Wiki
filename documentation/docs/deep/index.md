@@ -8,7 +8,6 @@ Tools for working with deep compositing data in Nuke.
 |------|--------|-------------|
 | [Deep2VP Suite](deep2vp.md) | Mark Joey Tang | Complete deep to position toolset |
 | [DeepFromDepth](deepfromdepth.md) | Andrea Geremia | Creates deep data from depth pass |
-| [DeepToPosition](deeptoposition.md) | Tony Lyons | Convert deep to WorldPosition pass |
 | [DeepRecolorMatte](deeprecolormatte.md) | Tony Lyons | Deep holdout matte workflow tool |
 | [DeepMerge_Advanced](deepmerge-advanced.md) | Ben McEwan | Advanced deep merge with soft blend |
 | [DeepCropSoft](deepcropsoft.md) | Wouter Gilsing | DeepCrop with soft falloff |
