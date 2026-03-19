@@ -148,7 +148,7 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 - Rebuild and inspect HTML in a real browser before assuming a PDF problem is caused by markdown content.
 - Prefer temp directories for PDF diagnostics; do not generate fallback image assets into the repo.
 - Generated PDF test builds should remain local/temporary artifacts and should not be committed.
-- The tracked `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf` file is the original reference PDF, not a generated test iteration.
+- The tracked `documentation/NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf` file is the original reference PDF, not a generated test iteration.
 - The current combined review target is `full-so-far`, which assembles cover, page 2, Technical Details, Menus, Special Thanks, and Contact into one local review PDF.
 - The current merged full-book target is `full-wiki`, which preserves the approved main-page build as truth and inserts the separately rendered tool-pages PDF between the front main pages and the end matter.
 - `./make_wiki_pdf full-wiki --category <slug>` now supports reduced TOC/layout runs while keeping the front matter and end matter in the build.

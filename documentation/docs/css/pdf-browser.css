@@ -78,6 +78,106 @@ samp {
   font-family: "JetBrains Mono", monospace !important;
 }
 
+/* Match the light code style used in the about/installation PDF page instead of
+   inheriting the site theme's dark syntax blocks. */
+code,
+.md-typeset code,
+article code,
+section code {
+  background: #efefef !important;
+  color: #24292f !important;
+  border-radius: 2px !important;
+  padding: 0.1em 0.35em !important;
+  font-size: 0.9em !important;
+  box-shadow: none !important;
+}
+
+pre,
+.md-typeset pre,
+article pre,
+section pre,
+.highlight,
+.md-typeset .highlight,
+article .highlight,
+section .highlight {
+  background: #eeeeee !important;
+  color: #24292f !important;
+  border-radius: 2px !important;
+  margin: 0.5em 0 !important;
+  padding: 0.5em 0.8em !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+pre code,
+.md-typeset pre code,
+.highlight pre,
+.md-typeset .highlight pre,
+.highlight code,
+.md-typeset .highlight code {
+  background: transparent !important;
+  color: #24292f !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+/* Print-friendly token colors for the Pygments classes used by fenced blocks. */
+.highlight .hll { background: #fff8c5 !important; }
+.highlight .c,
+.highlight .c1,
+.highlight .cm,
+.highlight .cp,
+.highlight .cs,
+.highlight .sd,
+.highlight .gh,
+.highlight .gu { color: #6a737d !important; }
+.highlight .k,
+.highlight .kc,
+.highlight .kd,
+.highlight .kn,
+.highlight .kp,
+.highlight .kr,
+.highlight .kt,
+.highlight .ow { color: #8250df !important; }
+.highlight .nf,
+.highlight .fm { color: #8250df !important; }
+.highlight .nb,
+.highlight .bp,
+.highlight .nc,
+.highlight .nn,
+.highlight .ne,
+.highlight .no,
+.highlight .nt { color: #0550ae !important; }
+.highlight .s,
+.highlight .s1,
+.highlight .s2,
+.highlight .sa,
+.highlight .sb,
+.highlight .sc,
+.highlight .dl,
+.highlight .sh,
+.highlight .si,
+.highlight .sx { color: #c82829 !important; }
+.highlight .m,
+.highlight .mb,
+.highlight .mf,
+.highlight .mh,
+.highlight .mi,
+.highlight .mo,
+.highlight .il { color: #116329 !important; }
+.highlight .o,
+.highlight .p,
+.highlight .n,
+.highlight .na,
+.highlight .nl,
+.highlight .nv,
+.highlight .nx,
+.highlight .py,
+.highlight .w { color: #24292f !important; }
+
 article {
   min-height: auto !important;
   height: auto !important;

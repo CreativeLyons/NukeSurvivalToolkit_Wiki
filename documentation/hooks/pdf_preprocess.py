@@ -142,6 +142,12 @@ def _exists_relative_to_page(docs_dir: str, src_uri: str, candidate: str | None)
     return _resolve_relative_to_docs(docs_dir, src_uri, candidate).exists()
 
 
+def _is_generic_video_placeholder(candidate: str | None) -> bool:
+    if not candidate:
+        return False
+    return Path(candidate).name == "video-placeholder.webp"
+
+
 def _watch_url(video_id: str, video_type: str) -> str:
     if video_type == "vimeo":
         return f"{VIMEO_WATCH_BASE}{video_id}"
@@ -166,10 +172,16 @@ def _video_container_repl(match: re.Match[str], *, page, docs_dir: str) -> str:
     explicit_thumb = attrs.get("data-thumbnail", "").strip()
     generated_thumb = _generated_thumb_src(page.file.src_uri, video_type, video_id)
 
-    if _exists_relative_to_page(docs_dir, page.file.src_uri, explicit_thumb):
+    if (
+        explicit_thumb
+        and not _is_generic_video_placeholder(explicit_thumb)
+        and _exists_relative_to_page(docs_dir, page.file.src_uri, explicit_thumb)
+    ):
         thumb_src = explicit_thumb
     elif _exists_relative_to_page(docs_dir, page.file.src_uri, generated_thumb):
         thumb_src = generated_thumb
+    elif _exists_relative_to_page(docs_dir, page.file.src_uri, explicit_thumb):
+        thumb_src = explicit_thumb
     else:
         thumb_src = _svg_placeholder_data_uri()
 

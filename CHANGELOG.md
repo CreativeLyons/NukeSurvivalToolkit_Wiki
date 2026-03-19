@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Infrastructure:**
 
 - README banner image asset at `documentation/docs/img/nst-wiki-large.jpeg`.
-- Offline PDF reference asset at `documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf`.
+- Offline PDF reference asset at `documentation/NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf`.
 - Local font assets under `documentation/docs/assets/fonts/` for Lato, JetBrains Mono, and Titillium Web.
 - PDF export source files for browser rendering under `documentation/mkdocs.pdf.yml`, `documentation/scripts/`, `documentation/templates/`, and `documentation/docs/css/`.
 - Public root-level `./export_pdf` entrypoint that defaults to the full wiki PDF while exposing section/category filtering through one command.

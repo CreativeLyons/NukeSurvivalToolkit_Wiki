@@ -191,7 +191,8 @@ nav:
         - RP_Reformat: transform/rp-reformat.md
         - InverseMatrix33: transform/inverse-matrix33.md
         - InverseMatrix44: transform/inverse-matrix44.md
-        - CardToTrack: transform/card-to-track.md
+        - CardToTrack_v7: transform/card-to-track.md
+        - CardToTrack_v9: transform/card-to-track-v9.md
         - CProject: transform/cproject.md
         - TProject: transform/tproject.md
         - STiCKiT: transform/stickit.md

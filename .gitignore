@@ -26,7 +26,7 @@ CLAUDE.md
 
 # PDF artifacts
 *.pdf
-!documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf
+!documentation/NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf
 documentation/scripts/content_analysis_report.md
 
 # Editor/IDE

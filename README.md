@@ -106,7 +106,7 @@ Generated PDFs are local build artifacts for inspection and should not be commit
 
 For the original offline reference version of the documentation, use the PDF:
 
-- [NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf](documentation/NukeSurvivalToolkit_Documentation_Release_v2.1.0.pdf)
+- [NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf](documentation/NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf)
 
 
 ## Changelog
