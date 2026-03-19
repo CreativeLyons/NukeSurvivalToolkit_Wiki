@@ -51,7 +51,7 @@ Open:
 
 A prebuilt static wiki ZIP will be provided in GitHub Releases so users can run the documentation offline without building from source.
 
-When available, download the latest release asset ZIP from the Releases page, unzip it anywhere on your machine, and open `site/index.html` (or serve the `site/` folder locally) to browse the full wiki offline.
+When available, download the latest release asset ZIP from the Releases page, unzip it anywhere on your machine, and open `NST_Documentation/index.html` (or serve the `NST_Documentation/` folder locally). Release zips use that top-level folder name to match bundles such as `NST_Documentation_Release_2.1.1.zip`. Local builds from source still output to `documentation/site/`.
 
 Releases:
 
