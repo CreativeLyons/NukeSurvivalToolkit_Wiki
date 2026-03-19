@@ -178,6 +178,10 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
   - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/scripts/add_pdf_toc_links.py`
   to inject clickable TOC rectangles and PDF bookmark-outline entries.
 - `./export_pdf` now keeps that normal output and, by default, also writes a `__compressed.pdf` sibling via Ghostscript. The current recommended preset is tuned around `128 dpi` color/gray image downsampling with forced JPEG recompression. For mixed/full exports, the compressed sibling is generated from the stamped PDF and then receives its own TOC-link and bookmark injection pass so navigation survives the lossy rewrite.
+- `./export_pdf` now also maintains a local bundle cache under `.cache/pdf-export/` for unstamped front-matter sections and per-category tool PDFs. The public flags are:
+  - `--no-cache`
+  - `--refresh-cache`
+- Tool-category exports now prune the MkDocs nav before `mkdocs build` and render category bundles in nav order, rather than always building the full tool corpus and trimming it afterward.
 - Verified full-book TOC run on March 12, 2026:
   - `./make_wiki_pdf full-wiki --artifact-version 20260312`
   - output: `459` pages

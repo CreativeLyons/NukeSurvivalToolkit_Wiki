@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -80,34 +81,119 @@ SINGLE_TRAILING_IMAGE_FIT_SCRIPT = """
 }
 """
 
+PAGE_READY_SCRIPT = """
+async () => {
+  if (document.fonts && document.fonts.ready) {
+    try {
+      await document.fonts.ready;
+    } catch (error) {
+      // Ignore font readiness failures and continue with rendering.
+    }
+  }
+
+  const loadPromises = [];
+  for (const image of Array.from(document.images || [])) {
+    if (image.complete) {
+      continue;
+    }
+    loadPromises.push(new Promise((resolve) => {
+      const finish = () => resolve();
+      image.addEventListener('load', finish, { once: true });
+      image.addEventListener('error', finish, { once: true });
+    }));
+  }
+
+  if (loadPromises.length) {
+    await Promise.all(loadPromises);
+  }
+
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+"""
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--html", required=True, help="Path to merged HTML file")
-    parser.add_argument("--output", required=True, help="Target PDF path")
-    parser.add_argument("--css", required=True, help="Browser print override CSS")
-    parser.add_argument("--wait-ms", type=int, default=1200)
+    parser.add_argument("--html", help="Path to merged HTML file")
+    parser.add_argument("--output", help="Target PDF path")
+    parser.add_argument("--css", help="Browser print override CSS")
+    parser.add_argument("--jobs-json", help="Path to a JSON file containing render jobs")
+    parser.add_argument("--wait-ms", type=int, default=250)
     parser.add_argument("--timeout-ms", type=int, default=60000)
     return parser.parse_args()
 
 
-def main() -> int:
-    args = parse_args()
+def load_jobs(args: argparse.Namespace) -> list[dict[str, str]]:
+    if args.jobs_json:
+        jobs_path = Path(args.jobs_json).resolve()
+        if not jobs_path.is_file():
+            raise SystemExit(f"ERROR: jobs JSON not found: {jobs_path}")
+        jobs = json.loads(jobs_path.read_text(encoding="utf-8"))
+        if not isinstance(jobs, list) or not jobs:
+            raise SystemExit("ERROR: jobs JSON must contain a non-empty array.")
+        normalized_jobs = []
+        for index, job in enumerate(jobs, start=1):
+            if not isinstance(job, dict):
+                raise SystemExit(f"ERROR: job {index} is not an object.")
+            try:
+                html_path = str(Path(job["html"]).resolve())
+                output_path = str(Path(job["output"]).resolve())
+                css_path = str(Path(job["css"]).resolve())
+            except KeyError as exc:
+                raise SystemExit(f"ERROR: job {index} is missing key: {exc.args[0]}") from exc
+            normalized_jobs.append({"html": html_path, "output": output_path, "css": css_path})
+        return normalized_jobs
 
-    html_path = Path(args.html).resolve()
-    output_path = Path(args.output).resolve()
-    css_path = Path(args.css).resolve()
+    if not (args.html and args.output and args.css):
+        raise SystemExit("ERROR: either --jobs-json or all of --html/--output/--css are required.")
+
+    return [
+        {
+            "html": str(Path(args.html).resolve()),
+            "output": str(Path(args.output).resolve()),
+            "css": str(Path(args.css).resolve()),
+        }
+    ]
+
+
+def render_job(page, job: dict[str, str], *, wait_ms: int, timeout_ms: int) -> None:
+    html_path = Path(job["html"])
+    output_path = Path(job["output"])
+    css_path = Path(job["css"])
 
     if not html_path.is_file():
-        print(f"ERROR: merged HTML not found: {html_path}", file=sys.stderr)
-        return 1
-
+        raise SystemExit(f"ERROR: merged HTML not found: {html_path}")
     if not css_path.is_file():
-        print(f"ERROR: browser print CSS not found: {css_path}", file=sys.stderr)
-        return 1
+        raise SystemExit(f"ERROR: browser print CSS not found: {css_path}")
 
     css_text = css_path.read_text(encoding="utf-8")
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    page.goto(html_path.as_uri(), wait_until="domcontentloaded", timeout=timeout_ms)
+    try:
+        page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    except PlaywrightTimeoutError:
+        pass
+
+    page.add_style_tag(content=css_text)
+    page.emulate_media(media="print")
+    page.evaluate(PAGE_READY_SCRIPT)
+    page.evaluate(SINGLE_TRAILING_IMAGE_FIT_SCRIPT)
+    if wait_ms > 0:
+        page.wait_for_timeout(wait_ms)
+    page.pdf(
+        path=str(output_path),
+        format="Letter",
+        print_background=True,
+        display_header_footer=False,
+        prefer_css_page_size=True,
+    )
+    print(output_path)
+
+
+def main() -> int:
+    args = parse_args()
+    jobs = load_jobs(args)
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(channel="chrome", headless=True)
@@ -115,27 +201,9 @@ def main() -> int:
             viewport={"width": 1280, "height": 1810},
             device_scale_factor=2,
         )
-
-        page.goto(html_path.as_uri(), wait_until="domcontentloaded", timeout=args.timeout_ms)
-        try:
-            page.wait_for_load_state("networkidle", timeout=args.timeout_ms)
-        except PlaywrightTimeoutError:
-            pass
-
-        page.add_style_tag(content=css_text)
-        page.emulate_media(media="print")
-        page.evaluate(SINGLE_TRAILING_IMAGE_FIT_SCRIPT)
-        page.wait_for_timeout(args.wait_ms)
-        page.pdf(
-            path=str(output_path),
-            format="Letter",
-            print_background=True,
-            display_header_footer=False,
-            prefer_css_page_size=True,
-        )
+        for job in jobs:
+            render_job(page, job, wait_ms=args.wait_ms, timeout_ms=args.timeout_ms)
         browser.close()
-
-    print(output_path)
     return 0
 
 

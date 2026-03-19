@@ -19,7 +19,8 @@ Transformation, warping, stabilization, and 2D/3D projection tools.
 | [RP_Reformat](rp-reformat.md) | Mark Joey Tang | Reformat Roto/RotoPaint vector data |
 | [InverseMatrix33](inverse-matrix33.md) | Mark Joey Tang | Live inverse 3x3 matrix |
 | [InverseMatrix44](inverse-matrix44.md) | Mark Joey Tang | Live inverse 4x4 matrix |
-| [CardToTrack](card-to-track.md) | Alexey Kuchinski | Find 3D position and reconcile to 2D |
+| [CardToTrack_v7](card-to-track.md) | Alexey Kuchinski | Legacy CardToTrack workflow retained for compatibility |
+| [CardToTrack_v9](card-to-track-v9.md) | Alexey Kuchinski | Current CardToTrack branch with tabbed extractions and update tools |
 | [CProject](cproject.md) | Alexey Kuchinski | CornerPin matchmove/stabilize |
 | [TProject](tproject.md) | Alexey Kuchinski | Transform single-point tracking |
 | [STiCKiT](stickit.md) | Mads Hagbarth Damsbo | 2D warp match-moving |

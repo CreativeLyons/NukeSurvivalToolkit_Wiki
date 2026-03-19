@@ -262,7 +262,11 @@ def nav_leaf_doc_paths(entry) -> list[Path]:
 
 def first_markdown_heading(doc_path: Path) -> str:
     """Read the first H1 from a markdown page for TOC and outline labels."""
-    for line in doc_path.read_text(encoding="utf-8").splitlines():
+    try:
+        lines = doc_path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError as exc:
+        raise SystemExit(f"ERROR: markdown doc missing: {doc_path}") from exc
+    for line in lines:
         if line.startswith("# "):
             return line[2:].strip()
     raise SystemExit(f"ERROR: no H1 heading found in {doc_path}")

@@ -8,7 +8,10 @@ output down to specific export parts or named presets.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
+import json
+import re
 import shutil
 import subprocess
 import tempfile
@@ -26,6 +29,11 @@ COMPRESSION_PROFILE = "recommended"
 COMPRESSED_SUFFIX = "compressed"
 COMPRESSION_IMAGE_DPI = 128
 COMPRESSION_MONO_DPI = 150
+CACHE_SCHEMA_VERSION = 1
+CACHE_ROOT = REPO_ROOT / ".cache" / "pdf-export"
+CACHE_MANIFEST_PATH = CACHE_ROOT / "manifest.json"
+SECTION_CACHE_DIR = CACHE_ROOT / "sections"
+TOOL_CACHE_DIR = CACHE_ROOT / "tool-categories"
 
 
 def load_script_module(name: str, path: Path):
@@ -124,6 +132,39 @@ SECTION_TOC_LABELS = {
     "technical-details": "Technical Details",
     "menu": "Menus",
 }
+SECTION_CONTENT_DOCS = {
+    "about-installation": REPO_ROOT / "documentation" / "docs" / "intro.md",
+    "technical-details": REPO_ROOT / "documentation" / "docs" / "techSpecs.md",
+    "menu": REPO_ROOT / "documentation" / "docs" / "menus.md",
+    "special-thanks": REPO_ROOT / "documentation" / "docs" / "special-thanks.md",
+    "contact": REPO_ROOT / "documentation" / "docs" / "contact.md",
+}
+SECTION_TEMPLATE_PATHS = {
+    "about-installation": REPO_ROOT / "documentation" / "templates" / "about-installation.html",
+    "technical-details": REPO_ROOT / "documentation" / "templates" / "technical_details.html",
+    "menu": REPO_ROOT / "documentation" / "templates" / "menu.html",
+    "special-thanks": REPO_ROOT / "documentation" / "templates" / "special-thanks.html",
+    "contact": REPO_ROOT / "documentation" / "templates" / "contact.html",
+}
+COMMON_SECTION_INPUTS = (
+    REPO_ROOT / "make_wiki_pdf",
+    REPO_ROOT / "documentation" / "hooks" / "pdf_preprocess.py",
+    REPO_ROOT / "documentation" / "docs" / "css" / "pdf-browser.css",
+    REPO_ROOT / "documentation" / "scripts" / "prepare_browser_html.py",
+    REPO_ROOT / "documentation" / "scripts" / "render_browser_pdf.py",
+    REPO_ROOT / "documentation" / "scripts" / "stamp_pdf_page_numbers.py",
+)
+COMMON_TOOL_INPUTS = (
+    REPO_ROOT / "make_tool_pages_pdf",
+    REPO_ROOT / "documentation" / "hooks" / "pdf_preprocess.py",
+    REPO_ROOT / "documentation" / "docs" / "css" / "pdf-browser.css",
+    REPO_ROOT / "documentation" / "scripts" / "prepare_browser_html.py",
+    REPO_ROOT / "documentation" / "scripts" / "render_browser_pdf.py",
+    REPO_ROOT / "documentation" / "docs" / "img" / "video-thumbs",
+)
+MARKDOWN_IMAGE_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
+HTML_SRC_RE = re.compile(r"""<(?:(?:img)|(?:source)|(?:video))\b[^>]*\bsrc=["']([^"']+)["']""", re.IGNORECASE)
+CSS_URL_RE = re.compile(r"""url\(([^)]+)\)""", re.IGNORECASE)
 
 
 def parse_args() -> argparse.Namespace:
@@ -186,6 +227,16 @@ def parse_args() -> argparse.Namespace:
         "--verbose",
         action="store_true",
         help="Show underlying renderer command output.",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable the local PDF bundle cache for this export run.",
+    )
+    parser.add_argument(
+        "--refresh-cache",
+        action="store_true",
+        help="Rebuild selected cached bundles before assembling the export.",
     )
     return parser.parse_args()
 
@@ -264,6 +315,331 @@ def resolve_output_dir(raw_output_dir: str | None) -> Path:
     if not output_dir.is_absolute():
         output_dir = Path.cwd() / output_dir
     return output_dir.resolve()
+
+
+def default_cache_manifest() -> dict:
+    return {"schema": CACHE_SCHEMA_VERSION, "bundles": {}}
+
+
+def load_cache_manifest() -> dict:
+    if not CACHE_MANIFEST_PATH.is_file():
+        return default_cache_manifest()
+    try:
+        manifest = json.loads(CACHE_MANIFEST_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return default_cache_manifest()
+    if manifest.get("schema") != CACHE_SCHEMA_VERSION or not isinstance(manifest.get("bundles"), dict):
+        return default_cache_manifest()
+    return manifest
+
+
+def save_cache_manifest(manifest: dict) -> None:
+    CACHE_ROOT.mkdir(parents=True, exist_ok=True)
+    CACHE_MANIFEST_PATH.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def expand_input_paths(paths: list[Path] | tuple[Path, ...]) -> list[Path]:
+    expanded: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        if path.is_dir():
+            for child in sorted(candidate for candidate in path.rglob("*") if candidate.is_file()):
+                if child not in seen:
+                    expanded.append(child)
+                    seen.add(child)
+        elif path.is_file() and path not in seen:
+            expanded.append(path)
+            seen.add(path)
+    return expanded
+
+
+def normalize_local_asset_ref(raw_ref: str) -> str | None:
+    ref = raw_ref.strip().strip("\"'")
+    if not ref:
+        return None
+    if ref.startswith("<") and ref.endswith(">"):
+        ref = ref[1:-1].strip()
+    if " " in ref and not ref.startswith(("data:", "http://", "https://")):
+        ref = ref.split(" ", 1)[0]
+    if not ref or ref.startswith(("#", "data:", "http://", "https://", "mailto:", "tel:", "javascript:", "//")):
+        return None
+    if "{" in ref or "}" in ref or "__" in ref:
+        return None
+    ref = ref.split("#", 1)[0].split("?", 1)[0].strip()
+    if not ref:
+        return None
+    return ref
+
+
+def local_asset_dependencies(paths: list[Path] | tuple[Path, ...]) -> list[Path]:
+    dependencies: list[Path] = []
+    seen: set[Path] = set()
+    for source_path in expand_input_paths(paths):
+        if source_path.suffix.lower() not in {".md", ".html", ".j2", ".css"}:
+            continue
+        try:
+            text = source_path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        raw_refs = list(MARKDOWN_IMAGE_RE.findall(text))
+        raw_refs.extend(HTML_SRC_RE.findall(text))
+        raw_refs.extend(CSS_URL_RE.findall(text))
+        for raw_ref in raw_refs:
+            normalized_ref = normalize_local_asset_ref(raw_ref)
+            if normalized_ref is None:
+                continue
+            candidate = (source_path.parent / normalized_ref).resolve()
+            try:
+                candidate.relative_to(REPO_ROOT)
+            except ValueError:
+                continue
+            if not candidate.exists() or candidate in seen:
+                continue
+            dependencies.append(candidate)
+            seen.add(candidate)
+    return dependencies
+
+
+def mkdocs_config_without_nav() -> dict[str, object]:
+    config = WIKI_PDF.load_base_config()
+    if not isinstance(config, dict):
+        return {}
+    normalized = dict(config)
+    normalized.pop("nav", None)
+    return normalized
+
+
+def signature_for_paths(paths: list[Path] | tuple[Path, ...], *, extras: dict[str, object]) -> str:
+    hasher = hashlib.sha256()
+    for path in expand_input_paths(paths):
+        try:
+            rel_path = path.relative_to(REPO_ROOT)
+        except ValueError:
+            rel_path = path
+        stat = path.stat()
+        hasher.update(str(rel_path).encode("utf-8"))
+        hasher.update(str(stat.st_size).encode("utf-8"))
+        hasher.update(str(stat.st_mtime_ns).encode("utf-8"))
+    hasher.update(json.dumps(extras, sort_keys=True).encode("utf-8"))
+    return hasher.hexdigest()
+
+
+def section_cache_key(section: str, *, version: str) -> str:
+    return f"section:{section}:{normalize_version_label(version)}"
+
+
+def section_cache_path(section: str) -> Path:
+    return SECTION_CACHE_DIR / f"{section}.pdf"
+
+
+def tool_cache_key(slug: str, *, version: str) -> str:
+    return f"tool-category:{slug}:{normalize_version_label(version)}"
+
+
+def tool_cache_pdf_path(slug: str) -> Path:
+    return TOOL_CACHE_DIR / f"{slug}.pdf"
+
+
+def tool_cache_meta_path(slug: str) -> Path:
+    return TOOL_CACHE_DIR / f"{slug}.json"
+
+
+def selected_tool_category_records(categories: list[str]) -> list[dict[str, object]]:
+    records: list[dict[str, object]] = []
+    for record in TOOL_PDF.selected_tool_category_records(categories):
+        entry = record["entry"]
+        entry_value = next(iter(entry.values()))
+        tool_docs = [
+            path
+            for path in WIKI_PDF.nav_leaf_doc_paths(entry_value)
+            if path.name != "index.md"
+        ]
+        records.append(
+            {
+                "entry": entry,
+                "slug": record["slug"],
+                "title": record["title"],
+                "tool_docs": tool_docs,
+                "tool_titles": [WIKI_PDF.first_markdown_heading(path) for path in tool_docs],
+            }
+        )
+    return records
+
+
+def section_signature(section: str, *, version: str) -> str:
+    inputs = list(COMMON_SECTION_INPUTS)
+    extras: dict[str, object] = {"section": section, "version": normalize_version_label(version)}
+    if section == "cover":
+        inputs.extend(
+            [
+                REPO_ROOT / "documentation" / "templates" / "cover.html.j2",
+                REPO_ROOT / "documentation" / "docs" / "img" / "pdf" / "NukeSurvivalToolkit_Splashpage_cover.jpg",
+            ]
+        )
+        extras["pdf_config"] = mkdocs_config_without_nav()
+    else:
+        content_doc = SECTION_CONTENT_DOCS.get(section)
+        template_path = SECTION_TEMPLATE_PATHS.get(section)
+        if content_doc is not None:
+            inputs.append(content_doc)
+            inputs.extend(local_asset_dependencies([content_doc]))
+        if template_path is not None:
+            inputs.append(template_path)
+            inputs.extend(local_asset_dependencies([template_path]))
+    return signature_for_paths(inputs, extras=extras)
+
+
+def tool_category_signature(category_record: dict[str, object], *, version: str) -> str:
+    slug = str(category_record["slug"])
+    inputs = list(COMMON_TOOL_INPUTS)
+    inputs.append(REPO_ROOT / "documentation" / "docs" / slug)
+    tool_img_dir = REPO_ROOT / "documentation" / "docs" / "img" / "tools" / slug
+    if tool_img_dir.exists():
+        inputs.append(tool_img_dir)
+    tool_docs = category_record.get("tool_docs") or []
+    if tool_docs:
+        inputs.extend(local_asset_dependencies(tool_docs))
+    return signature_for_paths(
+        inputs,
+        extras={
+            "slug": slug,
+            "title": category_record["title"],
+            "entry": category_record["entry"],
+            "pdf_config": mkdocs_config_without_nav(),
+            "version": normalize_version_label(version),
+        },
+    )
+
+
+def build_tool_category_metadata(pdf_path: Path, category_record: dict[str, object]) -> dict:
+    pages = WIKI_PDF.pdf_pages_text(pdf_path)
+    tool_relative_page_map = {
+        title: WIKI_PDF.page_for_title(title, pages)
+        for title in category_record["tool_titles"]
+    }
+    return {
+        "slug": category_record["slug"],
+        "title": category_record["title"],
+        "page_count": WIKI_PDF.page_count(pdf_path),
+        "tool_titles": category_record["tool_titles"],
+        "tool_relative_page_map": tool_relative_page_map,
+    }
+
+
+def resolve_section_bundle(
+    section: str,
+    *,
+    version: str,
+    working_dir: Path,
+    use_cache: bool,
+    refresh_cache: bool,
+    manifest: dict,
+    playwright_python: str,
+    verbose: bool,
+) -> tuple[Path, int, bool]:
+    signature = section_signature(section, version=version)
+    cache_key = section_cache_key(section, version=version)
+    cache_path = section_cache_path(section)
+    cache_entry = manifest["bundles"].get(cache_key)
+
+    if use_cache and not refresh_cache and cache_entry and cache_entry.get("signature") == signature and cache_path.is_file():
+        print(f"Section cache hit: {section}")
+        page_count = int(cache_entry.get("page_count") or WIKI_PDF.page_count(cache_path))
+        return cache_path, page_count, False
+
+    print(f"Section cache miss: {section}")
+    target_path = cache_path if use_cache else working_dir / f"{section}.pdf"
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    build_section_pdf(
+        section,
+        output_path=target_path,
+        version=version,
+        playwright_python=playwright_python,
+        verbose=verbose,
+    )
+    page_total = WIKI_PDF.page_count(target_path)
+    if use_cache:
+        manifest["bundles"][cache_key] = {"signature": signature, "page_count": page_total}
+    return target_path, page_total, use_cache
+
+
+def resolve_tool_category_bundles(
+    *,
+    category_records: list[dict[str, object]],
+    version: str,
+    working_dir: Path,
+    use_cache: bool,
+    refresh_cache: bool,
+    manifest: dict,
+    playwright_python: str,
+    verbose: bool,
+) -> tuple[list[dict[str, object]], bool]:
+    resolved: dict[str, dict[str, object]] = {}
+    stale_records: list[tuple[dict[str, object], str]] = []
+    manifest_changed = False
+
+    for record in category_records:
+        slug = str(record["slug"])
+        signature = tool_category_signature(record, version=version)
+        cache_key = tool_cache_key(slug, version=version)
+        cache_pdf = tool_cache_pdf_path(slug)
+        cache_meta = tool_cache_meta_path(slug)
+        cache_entry = manifest["bundles"].get(cache_key)
+        if use_cache and not refresh_cache and cache_entry and cache_entry.get("signature") == signature and cache_pdf.is_file() and cache_meta.is_file():
+            print(f"Tool bundle cache hit: {slug}")
+            resolved[slug] = {
+                "slug": slug,
+                "title": record["title"],
+                "pdf_path": cache_pdf,
+                "metadata": json.loads(cache_meta.read_text(encoding="utf-8")),
+            }
+            continue
+        print(f"Tool bundle cache miss: {slug}")
+        stale_records.append((record, signature))
+
+    if stale_records:
+        build_output_dir = working_dir / "tool-category-build"
+        built = dict(
+            TOOL_PDF.build_tool_category_pdfs(
+                categories=[str(record["slug"]) for record, _signature in stale_records],
+                version=version,
+                output_dir=build_output_dir,
+                playwright_python=playwright_python,
+                verbose=verbose,
+            )
+        )
+
+        for record, signature in stale_records:
+            slug = str(record["slug"])
+            built_pdf = built[slug]
+            metadata = build_tool_category_metadata(built_pdf, record)
+            if use_cache:
+                cache_pdf = tool_cache_pdf_path(slug)
+                cache_meta = tool_cache_meta_path(slug)
+                cache_pdf.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(built_pdf, cache_pdf)
+                cache_meta.write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
+                manifest["bundles"][tool_cache_key(slug, version=version)] = {
+                    "signature": signature,
+                    "page_count": metadata["page_count"],
+                }
+                manifest_changed = True
+                resolved[slug] = {
+                    "slug": slug,
+                    "title": record["title"],
+                    "pdf_path": cache_pdf,
+                    "metadata": metadata,
+                }
+            else:
+                resolved[slug] = {
+                    "slug": slug,
+                    "title": record["title"],
+                    "pdf_path": built_pdf,
+                    "metadata": metadata,
+                }
+
+    ordered = [resolved[str(record["slug"])] for record in category_records]
+    return ordered, manifest_changed
 
 
 def filename_suffix_components(
@@ -634,23 +1010,32 @@ def build_non_tool_only(
     output_path: Path,
     compressed_output_path: Path | None,
     ghostscript_path: str | None,
+    use_cache: bool,
+    refresh_cache: bool,
     playwright_python: str,
     verbose: bool,
 ) -> ExportResult:
     with tempfile.TemporaryDirectory(prefix="nst-export-pdf-sections.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
+        manifest = load_cache_manifest() if use_cache else default_cache_manifest()
+        manifest_changed = False
         section_paths: list[Path] = []
         for section in sections:
-            section_path = temp_dir / f"{section}.pdf"
-            print(f"Rendering section: {section}")
-            build_section_pdf(
+            section_path, _page_total, section_changed = resolve_section_bundle(
                 section,
-                output_path=section_path,
                 version=version,
+                working_dir=temp_dir,
+                use_cache=use_cache,
+                refresh_cache=refresh_cache,
+                manifest=manifest,
                 playwright_python=playwright_python,
                 verbose=verbose,
             )
+            manifest_changed = manifest_changed or section_changed
             section_paths.append(section_path)
+
+        if use_cache and manifest_changed:
+            save_cache_manifest(manifest)
 
         merged_path = temp_dir / "merged.pdf"
         merge_or_copy(section_paths, merged_path, verbose=verbose)
@@ -685,6 +1070,8 @@ def build_mixed_export(
     output_path: Path,
     compressed_output_path: Path | None,
     ghostscript_path: str | None,
+    use_cache: bool,
+    refresh_cache: bool,
     playwright_python: str,
     verbose: bool,
 ) -> ExportResult:
@@ -693,35 +1080,48 @@ def build_mixed_export(
 
     with tempfile.TemporaryDirectory(prefix="nst-export-pdf-mixed.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
+        manifest = load_cache_manifest() if use_cache else default_cache_manifest()
+        manifest_changed = False
 
         section_paths: dict[str, Path] = {}
         section_page_counts: dict[str, int] = {}
         for section in sections:
-            section_path = temp_dir / f"{section}.pdf"
-            print(f"Rendering section: {section}")
-            build_section_pdf(
+            section_path, page_total, section_changed = resolve_section_bundle(
                 section,
-                output_path=section_path,
                 version=version,
+                working_dir=temp_dir,
+                use_cache=use_cache,
+                refresh_cache=refresh_cache,
+                manifest=manifest,
                 playwright_python=playwright_python,
                 verbose=verbose,
             )
+            manifest_changed = manifest_changed or section_changed
             section_paths[section] = section_path
-            section_page_counts[section] = WIKI_PDF.page_count(section_path)
+            section_page_counts[section] = page_total
 
         front_paths = [section_paths[section] for section in front_sections]
         back_paths = [section_paths[section] for section in back_sections]
 
-        tool_pages_pdf = temp_dir / "tool-pages.pdf"
-        print("Rendering tool pages without visible numbering...")
-        TOOL_PDF.build_tool_pages(
-            categories=tool_categories,
+        category_records = selected_tool_category_records(tool_categories)
+        tool_bundles, tool_manifest_changed = resolve_tool_category_bundles(
+            category_records=category_records,
             version=version,
-            output_path=tool_pages_pdf,
+            working_dir=temp_dir,
+            use_cache=use_cache,
+            refresh_cache=refresh_cache,
+            manifest=manifest,
             playwright_python=playwright_python,
             verbose=verbose,
-            stamp_numbers=False,
         )
+        manifest_changed = manifest_changed or tool_manifest_changed
+
+        if use_cache and manifest_changed:
+            save_cache_manifest(manifest)
+
+        tool_pages_pdf = temp_dir / "tool-pages.pdf"
+        print("Merging tool category bundles...")
+        merge_or_copy([bundle["pdf_path"] for bundle in tool_bundles], tool_pages_pdf, verbose=verbose)
 
         merge_parts: list[Path] = []
         front_pages = 0
@@ -735,12 +1135,15 @@ def build_mixed_export(
             front_pages = WIKI_PDF.page_count(front_pdf)
 
         if include_toc:
-            tool_pages = WIKI_PDF.pdf_pages_text(tool_pages_pdf)
-            tool_groups = tool_groups_for_categories(tool_categories)
             tool_relative_page_map = {}
-            for _group_title, tool_titles in tool_groups:
-                for tool_title in tool_titles:
-                    tool_relative_page_map[tool_title] = WIKI_PDF.page_for_title(tool_title, tool_pages)
+            tool_groups = []
+            page_offset = 0
+            for bundle in tool_bundles:
+                metadata = bundle["metadata"]
+                tool_groups.append((metadata["title"], metadata["tool_titles"]))
+                for tool_title, relative_page in metadata["tool_relative_page_map"].items():
+                    tool_relative_page_map[tool_title] = page_offset + int(relative_page)
+                page_offset += int(metadata["page_count"])
 
             toc_pdf = temp_dir / "tool-index.pdf"
             print("Rendering Tool Index...")
@@ -807,6 +1210,7 @@ def build_mixed_export(
 def main() -> int:
     args = parse_args()
     export_parts, sections, include_tool_pages, include_toc, tool_categories = resolve_selection(args)
+    use_cache = not args.no_cache
 
     output_dir = resolve_output_dir(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -830,36 +1234,20 @@ def main() -> int:
     print(f"Tool categories: {', '.join(tool_categories) if tool_categories else 'all'}")
     print(f"Output: {output_path}")
     print(f"Compression: {'disabled' if args.no_compress else COMPRESSION_PROFILE}")
+    print(f"Cache: {'disabled' if args.no_cache else ('refresh' if args.refresh_cache else 'enabled')}")
     if compressed_output_path is not None:
         print(f"Compressed Output: {compressed_output_path}")
 
     result: ExportResult
-    if include_tool_pages and not sections and not include_toc:
-        print("Rendering tool pages only...")
-        TOOL_PDF.build_tool_pages(
-            categories=tool_categories,
-            version=args.version,
-            output_path=output_path,
-            playwright_python=playwright_python,
-            verbose=args.verbose,
-            stamp_numbers=True,
-        )
-        result = finalize_outputs(
-            source_pdf_path=output_path,
-            output_path=output_path,
-            compressed_output_path=compressed_output_path,
-            ghostscript_path=ghostscript_path,
-            toc_spec=None,
-            playwright_python=playwright_python,
-            verbose=args.verbose,
-        )
-    elif not include_tool_pages:
+    if not include_tool_pages:
         result = build_non_tool_only(
             sections=sections,
             version=args.version,
             output_path=output_path,
             compressed_output_path=compressed_output_path,
             ghostscript_path=ghostscript_path,
+            use_cache=use_cache,
+            refresh_cache=args.refresh_cache,
             playwright_python=playwright_python,
             verbose=args.verbose,
         )
@@ -872,6 +1260,8 @@ def main() -> int:
             output_path=output_path,
             compressed_output_path=compressed_output_path,
             ghostscript_path=ghostscript_path,
+            use_cache=use_cache,
+            refresh_cache=args.refresh_cache,
             playwright_python=playwright_python,
             verbose=args.verbose,
         )

@@ -41,6 +41,7 @@ documentation/scripts/content_analysis_report.md
 
 # Repo-local AI handoff files
 .ai/
+.code-review/
 
 # Codex worktrees
 .codex/

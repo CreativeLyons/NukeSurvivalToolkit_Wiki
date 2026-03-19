@@ -15,6 +15,7 @@ tool menus.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -52,6 +53,14 @@ NON_TOOL_URLS = {
 }
 # mkdocs-with-pdf also inserts cover and TOC articles with special IDs.
 NON_TOOL_IDS = {"doc-cover", "doc-toc"}
+NON_TOOL_NAV_TITLES = {
+    "Home",
+    "Intro",
+    "Tech Specs",
+    "Menus",
+    "Special Thanks",
+    "Contact",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -269,6 +278,86 @@ def load_full_nav() -> list:
     return load_base_config().get("nav", [])
 
 
+def nav_entry_title(entry) -> str | None:
+    """Return the display title for a single-entry MkDocs nav mapping."""
+    if isinstance(entry, dict) and len(entry) == 1:
+        return next(iter(entry))
+    return None
+
+
+def nav_entry_contains_category(entry, category: str) -> bool:
+    """Check whether a nav entry contains docs from the requested category slug."""
+    prefix = f"{category}/"
+
+    if isinstance(entry, str):
+        return entry.startswith(prefix) or entry == f"{category}/index.md"
+
+    if isinstance(entry, list):
+        return any(nav_entry_contains_category(child, category) for child in entry)
+
+    if isinstance(entry, dict):
+        return any(nav_entry_contains_category(value, category) for value in entry.values())
+
+    return False
+
+
+def nav_leaf_doc_paths(entry) -> list[Path]:
+    """Flatten a nested MkDocs nav entry into markdown file paths."""
+    if isinstance(entry, str):
+        return [(DOC_ROOT / "docs" / entry).resolve()]
+
+    if isinstance(entry, list):
+        paths = []
+        for child in entry:
+            paths.extend(nav_leaf_doc_paths(child))
+        return paths
+
+    if isinstance(entry, dict):
+        paths = []
+        for value in entry.values():
+            paths.extend(nav_leaf_doc_paths(value))
+        return paths
+
+    return []
+
+
+def selected_tool_category_records(categories: list[str]) -> list[dict[str, object]]:
+    """Return selected top-level tool categories in nav order."""
+    records: list[dict[str, object]] = []
+    matched_categories: set[str] = set()
+
+    for entry in load_full_nav():
+        title = nav_entry_title(entry)
+        if title is None or title in NON_TOOL_NAV_TITLES:
+            continue
+
+        if categories and not any(nav_entry_contains_category(entry, category) for category in categories):
+            continue
+
+        entry_value = next(iter(entry.values()))
+        docs = nav_leaf_doc_paths(entry_value)
+        tool_docs = [path for path in docs if path.name != "index.md"]
+        if not tool_docs:
+            continue
+
+        slug = tool_docs[0].relative_to((DOC_ROOT / "docs").resolve()).parts[0]
+        records.append({"title": title, "slug": slug, "entry": entry})
+
+        for category in categories:
+            if nav_entry_contains_category(entry, category):
+                matched_categories.add(category)
+
+    missing_categories = [category for category in categories if category not in matched_categories]
+    if missing_categories:
+        missing_list = ", ".join(missing_categories)
+        raise SystemExit(
+            f"ERROR: no nav category matched {missing_list!r}. "
+            "Use a docs directory slug such as draw, filter, transform, 3d, cg, curves, or utilities."
+        )
+
+    return records
+
+
 def normalize_categories(raw_categories: list[str]) -> list[str]:
     categories: list[str] = []
     seen: set[str] = set()
@@ -347,6 +436,111 @@ def filter_to_categories(html_path: Path, categories: list[str]) -> int:
     return kept_count
 
 
+def render_html_jobs_to_pdf(
+    jobs: list[dict[str, Path]],
+    *,
+    playwright_python: str,
+    verbose: bool,
+) -> None:
+    if not jobs:
+        return
+
+    if len(jobs) == 1:
+        job = jobs[0]
+        render_html_to_pdf(
+            job["html_path"],
+            job["output_path"],
+            css_path=job["css_path"],
+            playwright_python=playwright_python,
+            verbose=verbose,
+        )
+        return
+
+    with tempfile.TemporaryDirectory(prefix="nst-tool-pages-render-jobs.") as temp_dir_str:
+        jobs_path = Path(temp_dir_str) / "jobs.json"
+        payload = [
+            {
+                "html": str(job["html_path"]),
+                "output": str(job["output_path"]),
+                "css": str(job["css_path"]),
+            }
+            for job in jobs
+        ]
+        jobs_path.write_text(json.dumps(payload), encoding="utf-8")
+        run(
+            [
+                playwright_python,
+                str(DOC_ROOT / "scripts" / "render_browser_pdf.py"),
+                "--jobs-json",
+                str(jobs_path),
+            ],
+            stdout=None if verbose else subprocess.DEVNULL,
+            stderr=None if verbose else subprocess.DEVNULL,
+        )
+
+
+def merge_pdf_sequence(pdf_paths: list[Path], output_path: Path, *, verbose: bool) -> Path:
+    if not pdf_paths:
+        raise SystemExit("ERROR: no PDFs provided for merge.")
+    if len(pdf_paths) == 1:
+        shutil.copyfile(pdf_paths[0], output_path)
+        return output_path
+    run(
+        ["pdfunite", *[str(path) for path in pdf_paths], str(output_path)],
+        stdout=None if verbose else subprocess.DEVNULL,
+        stderr=None if verbose else subprocess.DEVNULL,
+    )
+    return output_path
+
+
+def build_tool_category_pdfs(
+    *,
+    categories: list[str],
+    version: str,
+    output_dir: Path,
+    playwright_python: str,
+    verbose: bool,
+) -> list[tuple[str, Path]]:
+    records = selected_tool_category_records(categories)
+    selected_nav = [record["entry"] for record in records]
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(prefix="nst-tool-pages-category-build.") as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+
+        print("Building merged HTML…")
+        html_path = build_merged_html(temp_dir, version=version, nav=selected_nav, verbose=verbose)
+
+        print("Filtering articles…")
+        removed = remove_non_tool_articles(html_path)
+        print(f"  Removed {removed} non-tool article(s).")
+
+        jobs: list[dict[str, Path]] = []
+        outputs: list[tuple[str, Path]] = []
+        for record in records:
+            slug = record["slug"]
+            title = record["title"]
+            category_html_path = temp_dir / f"{slug}.html"
+            shutil.copyfile(html_path, category_html_path)
+            kept = filter_to_categories(category_html_path, [str(slug)])
+            print(f"  Category '{title}' ({slug}): kept {kept} tool article(s).")
+
+            category_output_path = output_dir / f"tool-category-{slug}.pdf"
+            jobs.append(
+                {
+                    "html_path": category_html_path,
+                    "output_path": category_output_path,
+                    "css_path": PDF_BROWSER_CSS,
+                }
+            )
+            outputs.append((str(slug), category_output_path))
+
+        print("Rendering category PDFs…")
+        render_html_jobs_to_pdf(jobs, playwright_python=playwright_python, verbose=verbose)
+
+    return outputs
+
+
 def build_tool_pages(
     *,
     categories: list[str],
@@ -356,39 +550,19 @@ def build_tool_pages(
     verbose: bool,
     stamp_numbers: bool,
 ) -> Path:
-    nav = load_full_nav()
-
     with tempfile.TemporaryDirectory(prefix="nst-tool-pages.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
-
-        print("Building merged HTML…")
-        html_path = build_merged_html(temp_dir, version=version, nav=nav, verbose=verbose)
-
-        print("Filtering articles…")
-        removed = remove_non_tool_articles(html_path)
-        print(f"  Removed {removed} non-tool article(s).")
-
-        if categories:
-            kept = filter_to_categories(html_path, categories)
-            label = ", ".join(categories)
-            print(f"  Categories '{label}': kept {kept} tool article(s).")
-        else:
-            kept = page_count_estimate = 0
-            # Count tool sections for logging after non-tool removal only.
-            soup = BeautifulSoup(html_path.read_text(encoding="utf-8"), "html.parser")
-            for article in soup.body.find_all("article", recursive=False):
-                page_count_estimate += len(article.find_all("section", attrs={"data-url": True}))
-            kept = page_count_estimate
-            print(f"  Kept {kept} tool article(s).")
-
-        print("Rendering PDF…")
-        render_html_to_pdf(
-            html_path,
-            output_path,
-            css_path=PDF_BROWSER_CSS,
+        category_output_dir = temp_dir / "categories"
+        category_outputs = build_tool_category_pdfs(
+            categories=categories,
+            version=version,
+            output_dir=category_output_dir,
             playwright_python=playwright_python,
             verbose=verbose,
         )
+        ordered_paths = [path for _slug, path in category_outputs]
+        print("Merging category PDFs…")
+        merge_pdf_sequence(ordered_paths, output_path, verbose=verbose)
 
     if stamp_numbers:
         total = page_count(output_path)

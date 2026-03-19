@@ -63,6 +63,7 @@ The public PDF entrypoint for this repo is the root-level script `./export_pdf`.
 By default it exports the `full-wiki` preset. The older `./make_wiki_pdf` and `./make_tool_pages_pdf` scripts still exist, but they are now internal builder plumbing behind `./export_pdf` rather than the main user-facing interface.
 Generated PDFs now go to repo-local `output/pdf/` by default. Use `--output-dir` to override that destination with a relative or absolute path.
 `./export_pdf` now keeps the normal PDF output and, by default, also writes a Ghostscript-compressed sibling PDF with a `__compressed.pdf` suffix. The current recommended preset is tuned around `128 dpi` image downsampling plus forced JPEG recompression. Use `--no-compress` to skip that post-processing step.
+`./export_pdf` also keeps a local bundle cache under `.cache/pdf-export/` so unchanged front-matter sections and tool categories can be reused across runs. Use `--no-cache` to bypass that cache for one export, or `--refresh-cache` to rebuild the selected cached bundles before assembly.
 
 Common examples:
 
@@ -71,6 +72,8 @@ Common examples:
 - `./export_pdf tools-only`
 - `./export_pdf non-tools-only`
 - `./export_pdf --no-compress`
+- `./export_pdf --refresh-cache`
+- `./export_pdf --no-cache`
 - `./export_pdf --sections cover,about-installation,technical-specs,menu`
 - `./export_pdf --sections toc,tool-pages --tool-category draw --tool-category filter`
 - `./export_pdf --sections cover,menu,toc,tool-pages,special-thanks,contacts --tool-category draw`
@@ -83,6 +86,7 @@ Selection rules:
 - Use `--sections` to override the preset and build exactly the listed parts.
 - `toc` is only valid when `tool-pages` is also selected.
 - Use `--tool-category` to limit tool pages to specific category slugs such as `draw`, `filter`, `transform`, `3d`, `cg`, `curves`, or `utilities`.
+- The local bundle cache lives under `.cache/pdf-export/` and is ignored by git.
 - Filenames use `YYYYMMDD_HHMMSS__NukeSurvivalToolkit_Documentation_Release_vX.Y.Z[__suffix].pdf`.
 
 The content-backed PDF sections render from the wiki markdown source (`intro.md`, `techSpecs.md`, `menus.md`, `special-thanks.md`, `contact.md`) so the wiki and printable outputs stay aligned while preserving the approved PDF shell. Finished PDFs receive page numbers in one final stamping pass, and mixed/full exports with tool pages also generate a clickable `Tool Index` plus PDF sidebar bookmarks.
