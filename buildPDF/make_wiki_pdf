@@ -34,7 +34,8 @@ import yaml
 from bs4 import BeautifulSoup, NavigableString, Tag
 
 
-REPO_ROOT = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
 DOC_ROOT = REPO_ROOT / "documentation"
 MKDOCS_PDF_CONFIG = DOC_ROOT / "mkdocs.pdf.yml"
 PDF_BROWSER_CSS = DOC_ROOT / "docs" / "css" / "pdf-browser.css"
@@ -47,7 +48,7 @@ MENU_TEMPLATE = DOC_ROOT / "templates" / "menu.html"
 TOOLBAR_ICON = DOC_ROOT / "docs" / "img" / "NukeSurvivalToolkit_Documentation_v2.1.0.webp"
 JETBRAINS_MONO_REGULAR = DOC_ROOT / "docs" / "assets" / "fonts" / "jetbrains-mono-400-normal-latin.woff2"
 STAMP_PAGE_NUMBERS_SCRIPT = DOC_ROOT / "scripts" / "stamp_pdf_page_numbers.py"
-TOOL_PAGES_SCRIPT = REPO_ROOT / "make_tool_pages_pdf"
+TOOL_PAGES_SCRIPT = SCRIPT_DIR / "make_tool_pages_pdf"
 DEFAULT_VERSION = "v2.2.0"
 DEFAULT_OUTPUT_DIR = Path("/tmp/nst-wiki-pdf")
 INTRO_DOC = DOC_ROOT / "docs" / "intro.md"

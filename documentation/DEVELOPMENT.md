@@ -12,7 +12,8 @@ For step-by-step build, preview, publishing, and PDF export instructions, start 
 - `documentation/mkdocs.pdf.yml`: merged HTML configuration that supports the PDF pipeline.
 - `documentation/site/`: local HTML build output (ignored in git).
 - `.github/workflows/mkdocs.yml`: GitHub Pages build and deploy workflow.
-- `./export_pdf`: public PDF export entrypoint.
+- `./export_pdf`: public PDF export entrypoint (thin bash launcher at the repo root).
+- `buildPDF/`: PDF export implementations — `export_pdf`, `make_wiki_pdf`, and `make_tool_pages_pdf` (the public command is still `./export_pdf` from the repo root).
 
 ## Build Modes
 
@@ -35,14 +36,14 @@ The workflow triggers on pushes to `main` or `master` when files under `document
   - presets: `full-wiki`, `tools-only`, `non-tools-only`
   - parts via `--sections`: `cover`, `about-installation`, `technical-specs`, `menu`, `toc`, `tool-pages`, `special-thanks`, `contacts`
   - tool filtering via `--tool-category`
-- The existing `./make_wiki_pdf` and `./make_tool_pages_pdf` scripts remain in the repo as internal builder plumbing behind `./export_pdf`.
+- The existing `buildPDF/make_wiki_pdf` and `buildPDF/make_tool_pages_pdf` scripts remain in the repo as internal builder plumbing behind `./export_pdf`.
 - Output defaults to repo-local `output/pdf/`, with `--output-dir` available as an override.
 - Generated filenames follow `YYYYMMDD_HHMMSS__NukeSurvivalToolkit_Documentation_Release_vX.Y.Z[__suffix].pdf`.
-- The older `documentation/scripts/build_pdf.sh` path remains useful for full-book experiments, but the section-by-section workflow should be built out through `./make_wiki_pdf`.
+- The older `documentation/scripts/build_pdf.sh` path remains useful for full-book experiments, but the section-by-section workflow should be built out through `./buildPDF/make_wiki_pdf`.
 
 ### Current approved slice
 
-- The current approved subset is built through `./make_wiki_pdf full-so-far`.
+- The current approved subset is built through `./buildPDF/make_wiki_pdf full-so-far`.
 - It assembles:
   - `cover`
   - `about-installation`
@@ -139,7 +140,7 @@ The workflow triggers on pushes to `main` or `master` when files under `document
 - The tracked `documentation/NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf` file is the original reference PDF, not a generated test iteration.
 - The current combined review target is `full-so-far`, which assembles cover, page 2, Technical Details, Menus, Special Thanks, and Contact into one local review PDF.
 - The current merged full-book target is `full-wiki`, which preserves the approved main-page build as truth and inserts the separately rendered tool-pages PDF between the front main pages and the end matter.
-- `./make_wiki_pdf full-wiki --category <slug>` now supports reduced TOC/layout runs while keeping the front matter and end matter in the build.
+- `./buildPDF/make_wiki_pdf full-wiki --category <slug>` now supports reduced TOC/layout runs while keeping the front matter and end matter in the build.
 - `make_wiki_pdf` currently depends on:
   - Playwright-capable Python
   - `pypdf`
@@ -171,7 +172,7 @@ The workflow triggers on pushes to `main` or `master` when files under `document
   - `--refresh-cache`
 - Tool-category exports now prune the MkDocs nav before `mkdocs build` and render category bundles in nav order, rather than always building the full tool corpus and trimming it afterward.
 - Verified full-book TOC run on March 12, 2026:
-  - `./make_wiki_pdf full-wiki --artifact-version 20260312`
+  - `./buildPDF/make_wiki_pdf full-wiki --artifact-version 20260312`
   - output: `459` pages
   - size: `166.8 MB`
   - wall time: `4 min 16.90 sec`

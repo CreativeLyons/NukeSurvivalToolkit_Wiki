@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Moved `export_pdf`, `make_wiki_pdf`, and `make_tool_pages_pdf` into `buildPDF/`; added a repo-root `./export_pdf` launcher script so the public command path stays the same.
+
 ### Added
 
 **New tool pages (29 pages with images):**

@@ -27,7 +27,8 @@ import yaml
 from bs4 import BeautifulSoup
 
 
-REPO_ROOT = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
 DOC_ROOT = REPO_ROOT / "documentation"
 MKDOCS_PDF_CONFIG = DOC_ROOT / "mkdocs.pdf.yml"
 PDF_BROWSER_CSS = DOC_ROOT / "docs" / "css" / "pdf-browser.css"

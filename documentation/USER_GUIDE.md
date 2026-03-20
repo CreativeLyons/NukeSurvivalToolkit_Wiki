@@ -73,6 +73,8 @@ If you are opening a prebuilt release zip instead of building from source, unzip
 - `documentation/mkdocs.offline.yml`: offline/local-file configuration used for local HTML builds and release zips.
 - `documentation/mkdocs.pdf.yml`: merged HTML source used by the PDF pipeline. This is supporting infrastructure; the public entrypoint is still `./export_pdf`.
 
+The PDF implementations live under `buildPDF/` (`export_pdf`, `make_wiki_pdf`, `make_tool_pages_pdf`). The `./export_pdf` file at the repository root is a small launcher that runs `buildPDF/export_pdf` so you do not need to type the folder path for normal exports.
+
 ## Export The Offline PDF
 
 Use `./export_pdf` from the repository root. The default export mode is `full-wiki`.

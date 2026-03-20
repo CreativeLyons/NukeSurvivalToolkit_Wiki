@@ -62,7 +62,7 @@ If you want a portable PDF version of the wiki, use:
 ./export_pdf
 ```
 
-By default this exports the full wiki to `output/pdf/`. For more PDF options, offline workflows, and step-by-step instructions, use the user guide below.
+(`buildPDF/` holds the Python export scripts; the root `./export_pdf` command forwards there.) By default this exports the full wiki to `output/pdf/`. For more PDF options, offline workflows, and step-by-step instructions, use the user guide below.
 
 ## More Help
 
