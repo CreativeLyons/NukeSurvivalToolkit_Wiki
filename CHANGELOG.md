@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initialized repository git metadata for this wiki project.
 - Reworked `README.md` to prioritize the live wiki URL at the top, simplified section hierarchy, and clarified online/offline usage paths.
 - Made the README header banner image clickable to the live documentation site.
+- Refocused `README.md` into a user-facing landing page and moved practical build and export steps into `documentation/USER_GUIDE.md`, while trimming `documentation/DEVELOPMENT.md` back toward contributor-facing notes.
 - Updated `.gitignore` to allow versioning the official offline documentation PDF.
 - Split MkDocs configuration into online (`documentation/mkdocs.yml`) and offline (`documentation/mkdocs.offline.yml`) builds so GitHub Pages behavior remains unchanged while local ZIP behavior is optimized for `file://`.
 - Updated README and development docs with explicit online/offline build commands and offline ZIP entrypoint guidance (`site/index.html`).

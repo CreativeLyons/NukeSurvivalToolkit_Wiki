@@ -1,114 +1,82 @@
 # NukeSurvivalToolkit Wiki
 
-Live Online Wiki: <https://creativelyons.github.io/NukeSurvivalToolkit_Wiki/>
-
 [![Nuke Survival Toolkit Documentation Banner](documentation/docs/img/nst-wiki-large.jpeg)](https://creativelyons.github.io/NukeSurvivalToolkit_Wiki/)
 
-## Repository Layout
+The NST Wiki is the documentation site for the Nuke Survival Toolkit. It covers the current NST release, installation guidance, menu overview, and reference pages for `175+` tools.
 
-This repository contains the source and deployment setup for the NST wiki.
+`Current wiki release: v2.2.0`  
+`Read online:` <https://creativelyons.github.io/NukeSurvivalToolkit_Wiki/>  
+`Download releases:` <https://github.com/CreativeLyons/NukeSurvivalToolkit_Wiki/releases>
 
-- Docs source: `documentation/docs/`
-- MkDocs online config (GitHub Pages): `documentation/mkdocs.yml`
-- MkDocs offline config (ZIP/local file mode): `documentation/mkdocs.offline.yml`
-- Local build output: `documentation/site/` (ignored)
-- CI deploy workflow: `.github/workflows/mkdocs.yml`
+If you just want the fastest path:
 
-## Deployment
+- Read the live site: [NST Wiki Online](https://creativelyons.github.io/NukeSurvivalToolkit_Wiki/)
+- Use it offline without building: download the latest release zip and open `NST_Documentation/index.html`
+- Build your own local copy: use the quick commands below
+- Export a PDF copy: run `./export_pdf`
 
-Deployment is handled by GitHub Actions via `.github/workflows/mkdocs.yml` when changes are pushed to `main` under `documentation/**`.
-CI builds with `documentation/mkdocs.yml` (online config).
+## What You Can Do Here
 
-## Options for Offline Documentation:
+- Browse the NST wiki online through GitHub Pages.
+- Use an offline HTML copy for local browsing.
+- Export a local PDF reference copy of the wiki.
+- Edit and maintain the wiki source in this repository.
 
-## A. Build From Source (Offline Wiki)
+## Online, Offline HTML, And PDF
 
-Requirements:
+There are three ways to use this wiki:
 
-- Python 3.x
-- `mkdocs`
-- `mkdocs-material`
+- Online site: the public website, best for normal reading and sharing links.
+- Offline HTML: a local copy of the website, best when you want the wiki on disk or inside a release zip.
+- PDF export: a single-file reference document, best for portable sharing, review, or printing.
 
-Build:
+## Quick Local Preview
+
+If you are editing the wiki and want the normal website view, run:
+
+```bash
+cd documentation
+mkdocs serve -f mkdocs.yml -a 127.0.0.1:8010
+```
+
+Then open `http://127.0.0.1:8010/`.
+
+## Quick Offline Build
+
+If you want a local offline HTML copy from source, run:
 
 ```bash
 cd documentation
 mkdocs build -f mkdocs.offline.yml
 ```
 
-Serve locally:
+This writes the offline site to `documentation/site/`.
+
+If you are using a prebuilt release zip instead, unzip it and open `NST_Documentation/index.html`.
+
+## Offline PDF Export
+
+If you want a portable PDF version of the wiki, use:
 
 ```bash
-cd documentation
-mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
+./export_pdf
 ```
 
-Open:
+By default this exports the full wiki to `output/pdf/`. For more PDF options, offline workflows, and step-by-step instructions, use the user guide below.
 
-<http://127.0.0.1:8010/>
+## More Help
 
-## B. Offline Wiki (Prebuilt ZIP Release Asset)
+- [User Guide](documentation/USER_GUIDE.md): step-by-step instructions for local preview, offline HTML, publishing, and PDF export.
+- [Development Notes](documentation/DEVELOPMENT.md): contributor-facing repository structure, deployment behavior, and PDF internals.
+- [Changelog](CHANGELOG.md): project history and current unreleased changes.
+- [Wiki Home Source](documentation/docs/index.md): the markdown source for the site landing page.
 
-A prebuilt static wiki ZIP will be provided in GitHub Releases so users can run the documentation offline without building from source.
+## How It Is Hosted
 
-When available, download the latest release asset ZIP from the Releases page, unzip it anywhere on your machine, and open `NST_Documentation/index.html` (or serve the `NST_Documentation/` folder locally). Release zips use that top-level folder name to match bundles such as `NST_Documentation_Release_2.1.1.zip`. Local builds from source still output to `documentation/site/`.
+The public wiki is hosted on GitHub Pages and built by GitHub Actions.
 
-Releases:
+In brief:
 
-<https://github.com/CreativeLyons/NukeSurvivalToolkit_Wiki/releases>
-
-## C. Offline PDF Build (Local, Not Versioned)
-
-The public PDF entrypoint for this repo is the root-level script `./export_pdf`.
-By default it exports the `full-wiki` preset. The older `./make_wiki_pdf` and `./make_tool_pages_pdf` scripts still exist, but they are now internal builder plumbing behind `./export_pdf` rather than the main user-facing interface.
-Generated PDFs now go to repo-local `output/pdf/` by default. Use `--output-dir` to override that destination with a relative or absolute path.
-`./export_pdf` now keeps the normal PDF output and, by default, also writes a Ghostscript-compressed sibling PDF with a `__compressed.pdf` suffix. The current recommended preset is tuned around `128 dpi` image downsampling plus forced JPEG recompression. Use `--no-compress` to skip that post-processing step.
-`./export_pdf` also keeps a local bundle cache under `.cache/pdf-export/` so unchanged front-matter sections and tool categories can be reused across runs. Use `--no-cache` to bypass that cache for one export, or `--refresh-cache` to rebuild the selected cached bundles before assembly.
-
-Common examples:
-
-- `./export_pdf`
-- `./export_pdf full-wiki`
-- `./export_pdf tools-only`
-- `./export_pdf non-tools-only`
-- `./export_pdf --no-compress`
-- `./export_pdf --refresh-cache`
-- `./export_pdf --no-cache`
-- `./export_pdf --sections cover,about-installation,technical-specs,menu`
-- `./export_pdf --sections toc,tool-pages --tool-category draw --tool-category filter`
-- `./export_pdf --sections cover,menu,toc,tool-pages,special-thanks,contacts --tool-category draw`
-- `./export_pdf --output-dir /tmp/nst-pdf-checks`
-
-Selection rules:
-
-- Presets: `full-wiki`, `tools-only`, and `non-tools-only`.
-- Export parts: `cover`, `about-installation`, `technical-specs`, `menu`, `toc`, `tool-pages`, `special-thanks`, and `contacts`.
-- Use `--sections` to override the preset and build exactly the listed parts.
-- `toc` is only valid when `tool-pages` is also selected.
-- Use `--tool-category` to limit tool pages to specific category slugs such as `draw`, `filter`, `transform`, `3d`, `cg`, `curves`, or `utilities`.
-- The local bundle cache lives under `.cache/pdf-export/` and is ignored by git.
-- Filenames use `YYYYMMDD_HHMMSS__NukeSurvivalToolkit_Documentation_Release_vX.Y.Z[__suffix].pdf`.
-
-The content-backed PDF sections render from the wiki markdown source (`intro.md`, `techSpecs.md`, `menus.md`, `special-thanks.md`, `contact.md`) so the wiki and printable outputs stay aligned while preserving the approved PDF shell. Finished PDFs receive page numbers in one final stamping pass, and mixed/full exports with tool pages also generate a clickable `Tool Index` plus PDF sidebar bookmarks.
-When compression is enabled, mixed/full exports compress the stamped PDF first and then inject Tool Index links and bookmarks into the compressed sibling so the release-style output keeps working navigation.
-
-Requirements:
-
-- Google Chrome installed locally
-- A Python interpreter with `playwright` available
-- Python packages from `documentation/requirements-pdf.txt` (includes `pypdf` for final page-number stamping and Tool Index link injection)
-- Ghostscript available on `PATH` for the default compression step
-- Poppler CLI tools `pdfinfo`, `pdfseparate`, and `pdfunite` available on `PATH`
-
-Generated PDFs are local build artifacts for inspection and should not be committed.
-
-## D. Offline Wiki (PDF Reference)
-
-For the original offline reference version of the documentation, use the PDF:
-
-- [NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf](documentation/NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf)
-
-
-## Changelog
-
-Project change history is tracked in `CHANGELOG.md`.
+- `documentation/mkdocs.yml` is the online website build.
+- `documentation/mkdocs.offline.yml` is the offline HTML build used for local copies and release zips.
+- Changes under `documentation/**` are built and deployed to GitHub Pages by `.github/workflows/mkdocs.yml`.

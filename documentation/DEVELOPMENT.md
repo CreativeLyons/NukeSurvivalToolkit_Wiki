@@ -1,42 +1,30 @@
-# Development Notes
+# Development
+
+Contributor-facing notes for the NST wiki repository.
+
+For step-by-step build, preview, publishing, and PDF export instructions, start with `documentation/USER_GUIDE.md`. This file is for repository structure, deployment behavior, and deeper PDF implementation context.
 
 ## Repository Layout
 
 - `documentation/docs/`: markdown pages and static assets used by MkDocs.
 - `documentation/mkdocs.yml`: online GitHub Pages configuration.
-- `documentation/mkdocs.offline.yml`: offline ZIP/local-file configuration.
-- `documentation/site/`: local build output (ignored in git).
-- `.github/workflows/mkdocs.yml`: GitHub Pages build/deploy workflow.
+- `documentation/mkdocs.offline.yml`: offline ZIP and local-file configuration.
+- `documentation/mkdocs.pdf.yml`: merged HTML configuration that supports the PDF pipeline.
+- `documentation/site/`: local HTML build output (ignored in git).
+- `.github/workflows/mkdocs.yml`: GitHub Pages build and deploy workflow.
+- `./export_pdf`: public PDF export entrypoint.
 
-## Local Workflow
+## Build Modes
 
-### Build
+- Online/public site: driven by `documentation/mkdocs.yml`.
+- Offline HTML wiki: driven by `documentation/mkdocs.offline.yml`.
+- Offline PDF export: run through `./export_pdf`, which delegates to the internal PDF builder scripts.
 
-```bash
-cd documentation
-mkdocs build
-```
+## Deployment Summary
 
-Offline build:
+GitHub Pages deployment is handled by `.github/workflows/mkdocs.yml`.
 
-```bash
-cd documentation
-mkdocs build -f mkdocs.offline.yml
-```
-
-### Serve
-
-```bash
-cd documentation
-mkdocs serve -a 127.0.0.1:8010
-```
-
-Offline serve:
-
-```bash
-cd documentation
-mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
-```
+The workflow triggers on pushes to `main` or `master` when files under `documentation/**` change, installs `mkdocs-material`, builds from `documentation/mkdocs.yml`, and deploys `documentation/site/`.
 
 ## PDF Export Findings (2026-03-05)
 
