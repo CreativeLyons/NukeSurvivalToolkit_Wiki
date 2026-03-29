@@ -39,6 +39,11 @@ jobs:
           cd documentation
           mkdocs build
 
+      - name: Build offline MkDocs (config check)
+        run: |
+          cd documentation
+          mkdocs build -f mkdocs.offline.yml -d /tmp/mkdocs_offline_ci
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

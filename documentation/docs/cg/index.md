@@ -13,7 +13,7 @@ Tools for CG compositing, position passes, normals, and relighting.
 | [Noise4D](noise4d.md) | Mads Hagbarth Damsbo | 4D simplex noise generator |
 | [Relight_Simple](relight-simple.md) | SPIN FX / Erwan Leroy | Simplified relight node |
 | [Reproject3D](reproject3d.md) | SPIN FX / Erwan Leroy | Camera projection using position pass |
-| [C44Kernal](c44kernal.md) | Adrian Pueyo | 4x4 Matrix color multiplication |
+| [C44Kernel](c44kernel.md) | Adrian Pueyo | 4x4 Matrix color multiplication |
 | [apDirLight](apdirlight.md) | Adrian Pueyo | Directional light through normals |
 | [apFresnel](apfresnel.md) | Adrian Pueyo | Fresnel pass from normals |
 | [CameraNormals](cameranormals.md) | Nikolai Wüstemann | World to camera space normals |

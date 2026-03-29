@@ -7,8 +7,8 @@ For step-by-step build, preview, publishing, and PDF export instructions, start 
 ## Repository Layout
 
 - `documentation/docs/`: markdown pages and static assets used by MkDocs.
-- `documentation/mkdocs.yml`: online GitHub Pages configuration.
-- `documentation/mkdocs.offline.yml`: offline ZIP and local-file configuration.
+- `documentation/mkdocs.yml`: online GitHub Pages configuration. **Sidebar `nav` is defined only here** (single source of truth).
+- `documentation/mkdocs.offline.yml`: offline ZIP and local-file configuration. Uses MkDocs `INHERIT: mkdocs.yml` and overrides only plugins, theme, and scripts needed for `file://` viewing—do not duplicate `nav` in this file.
 - `documentation/mkdocs.pdf.yml`: merged HTML configuration that supports the PDF pipeline.
 - `documentation/site/`: local HTML build output (ignored in git).
 - `.github/workflows/mkdocs.yml`: GitHub Pages build and deploy workflow.
@@ -18,14 +18,14 @@ For step-by-step build, preview, publishing, and PDF export instructions, start 
 ## Build Modes
 
 - Online/public site: driven by `documentation/mkdocs.yml`.
-- Offline HTML wiki: driven by `documentation/mkdocs.offline.yml`.
+- Offline HTML wiki: driven by `documentation/mkdocs.offline.yml` (inherits `mkdocs.yml`; same sidebar as online).
 - Offline PDF export: run through `./export_pdf`, which delegates to the internal PDF builder scripts.
 
 ## Deployment Summary
 
 GitHub Pages deployment is handled by `.github/workflows/mkdocs.yml`.
 
-The workflow triggers on pushes to `main` or `master` when files under `documentation/**` change, installs `mkdocs-material`, builds from `documentation/mkdocs.yml`, and deploys `documentation/site/`.
+The workflow triggers on pushes to `main` or `master` when files under `documentation/**` change, installs `mkdocs-material`, builds from `documentation/mkdocs.yml`, and deploys `documentation/site/`. It also runs `mkdocs build -f mkdocs.offline.yml` to a throwaway directory so a broken offline config fails the job before deploy.
 
 ## PDF Export Findings (2026-03-05)
 
@@ -132,7 +132,7 @@ The workflow triggers on pushes to `main` or `master` when files under `document
 
 ### Operational notes
 
-- Treat `documentation/mkdocs.offline.yml` as the stable local HTML build config.
+- Treat `documentation/mkdocs.offline.yml` as the stable local HTML build config; edit sidebar structure only in `documentation/mkdocs.yml`.
 - Run direct MkDocs offline commands from `documentation/` when possible so the privacy-plugin cache stays under `documentation/.cache/`; running those commands from the repo root can create an extra root `.cache/` directory.
 - Rebuild and inspect HTML in a real browser before assuming a PDF problem is caused by markdown content.
 - Prefer temp directories for PDF diagnostics; do not generate fallback image assets into the repo.

@@ -1,8 +1,8 @@
-# C44Kernal [AP]
+# C44Kernel [AP]
 
 **Author:** Adrian Pueyo - [http://www.adrianpueyo.com/](http://www.adrianpueyo.com/)
 
-![c44kernal-1.webp](../img/tools/cg/c44kernal-1.webp)
+![c44kernel-1.webp](../img/tools/cg/c44kernel-1.webp)
 
 - [http://www.nukepedia.com/blink/colour/c44kernel](http://www.nukepedia.com/blink/colour/c44kernel)
 

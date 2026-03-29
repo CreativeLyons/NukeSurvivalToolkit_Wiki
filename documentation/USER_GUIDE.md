@@ -65,12 +65,27 @@ mkdocs serve -f mkdocs.offline.yml -a 127.0.0.1:8010
 
 The generated site is written to `documentation/site/`.
 
-If you are opening a prebuilt release zip instead of building from source, unzip it and open `NST_Documentation/index.html`.
+### Offline search and opening files from disk (`file://`)
+
+The offline build includes `search/search_index.js` and the iframe-worker shim so search can work without a network. **Browsers still limit `file://` pages:** Chrome in particular may block or partially run local scripts and workers, so search can stay on “Initializing search” or look broken even when the files are present.
+
+**Reliable way to verify search (and match how the online site behaves over HTTP):** serve the built folder over HTTP, for example:
+
+```bash
+cd documentation/site
+python3 -m http.server 8765
+```
+
+Then open `http://127.0.0.1:8765` in Chrome. Alternatively use `mkdocs serve -f mkdocs.offline.yml` (see above), which serves the same config over HTTP.
+
+**Avoid comparing** the online build and offline build **only** by double-clicking `index.html` in both output folders: the online build does not ship `search_index.js`, and `file://` restrictions apply differently in each case. Use HTTP for both, or compare the public site on GitHub Pages to an offline build served locally.
+
+If you are opening a prebuilt release zip instead of building from source, unzip it and open `NST_Documentation/index.html`, or use a local HTTP server in the unzipped folder for full search.
 
 ## What The YAML Files Do
 
-- `documentation/mkdocs.yml`: online/public configuration used by GitHub Pages.
-- `documentation/mkdocs.offline.yml`: offline/local-file configuration used for local HTML builds and release zips.
+- `documentation/mkdocs.yml`: online/public configuration used by GitHub Pages. Sidebar navigation is edited only in this file.
+- `documentation/mkdocs.offline.yml`: offline/local-file configuration used for local HTML builds and release zips. It inherits `mkdocs.yml` and adds offline-only plugins and theme settings (same sidebar as the online build).
 - `documentation/mkdocs.pdf.yml`: merged HTML source used by the PDF pipeline. This is supporting infrastructure; the public entrypoint is still `./export_pdf`.
 
 The PDF implementations live under `buildPDF/` (`export_pdf`, `make_wiki_pdf`, `make_tool_pages_pdf`). The `./export_pdf` file at the repository root is a small launcher that runs `buildPDF/export_pdf` so you do not need to type the folder path for normal exports.

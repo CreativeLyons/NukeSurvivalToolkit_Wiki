@@ -253,7 +253,7 @@ nav:
         - Noise4D: cg/noise4d.md
         - Relight_Simple: cg/relight-simple.md
         - Reproject3D: cg/reproject3d.md
-        - C44Kernal: cg/c44kernal.md
+        - C44Kernel: cg/c44kernel.md
         - apDirLight: cg/apdirlight.md
         - apFresnel: cg/apfresnel.md
         - CameraNormals: cg/cameranormals.md

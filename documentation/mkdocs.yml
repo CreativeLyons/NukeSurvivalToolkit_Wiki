@@ -8,7 +8,8 @@ use_directory_urls: false
 # PDF export - mkdocs-to-pdf (WeasyPrint)
 # Run with: DYLD_LIBRARY_PATH="/opt/homebrew/lib" PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig" mkdocs build
 plugins:
-  - search
+  # Dict form enables deep-merge when using INHERIT in mkdocs.offline.yml (MkDocs 1.5+).
+  search: {}
 
 nav:
     - Home: index.md
@@ -238,7 +239,7 @@ nav:
         - Noise4D: cg/noise4d.md
         - Relight_Simple: cg/relight-simple.md
         - Reproject3D: cg/reproject3d.md
-        - C44Kernal: cg/c44kernal.md
+        - C44Kernel: cg/c44kernel.md
         - apDirLight: cg/apdirlight.md
         - apFresnel: cg/apfresnel.md
         - CameraNormals: cg/cameranormals.md
