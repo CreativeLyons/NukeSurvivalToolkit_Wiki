@@ -31,7 +31,7 @@ If you just want the fastest path:
 - Edit and maintain the wiki source in this repository.
 
 
-## Online, Offline HTML, And PDF
+## Online, Offline, And PDF
 
 There are three ways to access the wiki:
 
