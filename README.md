@@ -6,11 +6,14 @@
 
 The NST Wiki is the documentation site for the Nuke Survival Toolkit. It covers the current NST release, installation guidance, menu overview, and reference pages for `175+` tools.
 
-**Toolkit (gizmos, menu, releases):** [NukeSurvivalToolkit_publicRelease on GitHub](https://github.com/CreativeLyons/NukeSurvivalToolkit_publicRelease)
+### **Nuke Survival Toolkit Public Repo :** [NukeSurvivalToolkit_publicRelease on GitHub](https://github.com/CreativeLyons/NukeSurvivalToolkit_publicRelease)
 
-`Current wiki release: v2.2.0`
+`Current Release: v2.2.0`
+
 `Read online:` <https://creativelyons.github.io/NukeSurvivalToolkit_Wiki/>
+
 `This wiki on GitHub:` <https://github.com/CreativeLyons/NukeSurvivalToolkit_Wiki>
+
 `Download release offline wiki zip files:` <https://github.com/CreativeLyons/NukeSurvivalToolkit_Wiki/releases>
 
 If you just want the fastest path:
@@ -79,7 +82,6 @@ For more PDF options, offline workflows, and step-by-step instructions, see the 
 
 - [User Guide](documentation/USER_GUIDE.md): step-by-step instructions for local preview, offline HTML, publishing, and PDF export.
 - [Development Notes](documentation/DEVELOPMENT.md): contributor-facing repository structure, deployment behavior, and PDF internals.
-- [AGENTS.md](AGENTS.md): map of DEVELOPMENT vs archived PDF history vs user guide (for assistants and advanced contributors).
 - [Changelog](CHANGELOG.md): project history and current unreleased changes.
 
 ## How It's Hosted
