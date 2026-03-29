@@ -4,9 +4,13 @@ Contributor-facing notes for the NST wiki repository.
 
 For step-by-step build, preview, publishing, and PDF export instructions, start with `documentation/USER_GUIDE.md`. This file is for repository structure, deployment behavior, and deeper PDF implementation context.
 
+**PDF decision history and dated experiments** (WeasyPrint vs Playwright, benchmarks, debugging notes): [PDF pipeline history](archive/pdf-pipeline-history.md) — tracked, not part of the MkDocs site.
+
+**AI assistants:** see repo-root `AGENTS.md` for how this file relates to the archive and the user guide.
+
 ## Repository Layout
 
-- `documentation/docs/`: markdown pages and static assets used by MkDocs.
+- `documentation/docs/`: markdown pages and static assets used by MkDocs. The public site’s landing page body is `documentation/docs/index.md` (MkDocs home at `/`).
 - `documentation/mkdocs.yml`: online GitHub Pages configuration. **Sidebar `nav` is defined only here** (single source of truth).
 - `documentation/mkdocs.offline.yml`: offline ZIP and local-file configuration. Uses MkDocs `INHERIT: mkdocs.yml` and overrides only plugins, theme, and scripts needed for `file://` viewing—do not duplicate `nav` in this file.
 - `documentation/mkdocs.pdf.yml`: merged HTML configuration that supports the PDF pipeline.
@@ -27,7 +31,7 @@ GitHub Pages deployment is handled by `.github/workflows/mkdocs.yml`.
 
 The workflow triggers on pushes to `main` or `master` when files under `documentation/**` change, installs `mkdocs-material`, builds from `documentation/mkdocs.yml`, and deploys `documentation/site/`. It also runs `mkdocs build -f mkdocs.offline.yml` to a throwaway directory so a broken offline config fails the job before deploy.
 
-## PDF Export Findings (2026-03-05)
+## PDF pipeline
 
 ### Main entrypoint
 
@@ -39,12 +43,12 @@ The workflow triggers on pushes to `main` or `master` when files under `document
 - The existing `buildPDF/make_wiki_pdf` and `buildPDF/make_tool_pages_pdf` scripts remain in the repo as internal builder plumbing behind `./export_pdf`.
 - Output defaults to repo-local `output/pdf/`, with `--output-dir` available as an override.
 - Generated filenames follow `YYYYMMDD_HHMMSS__NukeSurvivalToolkit_Documentation_Release_vX.Y.Z[__suffix].pdf`.
-- The older `documentation/scripts/build_pdf.sh` path remains useful for full-book experiments, but the section-by-section workflow should be built out through `./buildPDF/make_wiki_pdf`.
+- The older `documentation/scripts/build_pdf.sh` path remains useful for full-book experiments; section-by-section work also uses `./buildPDF/make_wiki_pdf`.
 
-### Current approved slice
+### Non-tool sections (`non-tool-sections`)
 
-- The current approved subset is built through `./buildPDF/make_wiki_pdf full-so-far`.
-- It assembles:
+- One merged PDF of **every non-tool section** (cover through contact, no tool pages) is built with **`./buildPDF/make_wiki_pdf non-tool-sections`** (implemented as `build_non_tool_sections()` in `buildPDF/make_wiki_pdf`). This is separate from the default **`./export_pdf`** flow (presets, tool pages, Tool Index, cache, compression); use it when you need that merged slice for template or layout review.
+- It merges **in this order** (see `pdfunite` sequence in `build_non_tool_sections`):
   - `cover`
   - `about-installation`
   - `technical-details`
@@ -52,83 +56,29 @@ The workflow triggers on pushes to `main` or `master` when files under `document
   - `special-thanks`
   - `contact`
 - The about-installation page uses the dedicated approved shell template:
-  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/templates/about-installation.html`
+  - `documentation/templates/about-installation.html`
 - The about-installation code block uses the repo-local JetBrains Mono asset and the replacement path string is intentionally red to warn users to change it.
-- The about-installation page now acts as the source-of-truth front-matter shell, while its content comes from:
-  - `about-installation` -> `documentation/docs/intro.md`
-- The content slices after the about-installation page now build from the wiki markdown pages instead of standalone content templates:
-  - `technical-details` -> `documentation/docs/techSpecs.md`
-  - `menu` -> `documentation/docs/menus.md`
-  - `special-thanks` -> `documentation/docs/special-thanks.md`
-  - `contact` -> `documentation/docs/contact.md`
+- The about-installation page acts as the source-of-truth front-matter shell, while its content comes from:
+  - `about-installation` → `documentation/docs/intro.md`
+- The content slices after the about-installation page build from the wiki markdown pages instead of standalone content templates:
+  - `technical-details` → `documentation/docs/techSpecs.md`
+  - `menu` → `documentation/docs/menus.md`
+  - `special-thanks` → `documentation/docs/special-thanks.md`
+  - `contact` → `documentation/docs/contact.md`
 - Individual section targets are rendered contextually from the combined subset and then extracted back out, so the current local review pages keep a consistent sequence.
-- The older `page2` target name still works as a legacy alias, but `about-installation` is now the canonical name.
-- `About` is no longer part of the live nav, and the old `documentation/docs/about.md` page has been removed.
-- `technical-details` now paginates as flowing content inside the approved shell, using two invisible context pages so Chrome lays it out as if it begins on page 3 before the real pages are extracted back out.
-- Final visible page numbers are no longer trusted to template HTML. The finished PDFs are stamped afterward by:
-  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/scripts/stamp_pdf_page_numbers.py`
-- The legacy cover HTML page number is hidden in:
-  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/docs/css/pdf-browser.css`
-- This means the cover and interior pages all share one post-render page-number position.
+- `technical-details` paginates as flowing content inside the approved shell, using two invisible context pages so Chrome lays it out as if it begins on page 3 before the real pages are extracted back out.
+- Final visible page numbers are not trusted to template HTML alone. Section PDFs are produced with `documentation/scripts/stamp_pdf_page_numbers.py` via `stamp_page_numbers()` in `make_wiki_pdf` where each builder enables it. The **`non-tool-sections`** target **`pdfunite`s those section PDFs** and does **not** run a second pass over the merged file; **`full-wiki`** and **`./export_pdf`** stamp the **combined** PDF after merge (and run further TOC/link steps as documented below).
 
-### Current state
+### Current architecture
 
-- The repo's strongest proven path is still the offline/local HTML build:
-  - `mkdocs build -f mkdocs.offline.yml`
-- `mkdocs.pdf.yml` is still useful as the merged-HTML source for PDF slice extraction, but WeasyPrint is not reliable as the final renderer for this document.
-- The current proven PDF path is:
-  - MkDocs merged HTML
-  - Playwright/Chrome render
-  - `pypdf` page-number stamping
-  - `pdfseparate` / `pdfunite` extraction and assembly
-
-### Verified renderer behavior
-
-- `mkdocs-with-pdf` + WeasyPrint can build a merged HTML document containing all later chapters and end matter.
-- The resulting WeasyPrint PDF truncates around `Draw/AutoFlare` in long renders.
-- The same merged HTML, when printed with Chrome/Playwright, includes the later pages that WeasyPrint drops.
-- `Google Chrome.app` and the `playwright` CLI are already available locally, so a browser-renderer path is viable without adding dependencies.
-
-### Important debugging conclusions
-
-- The truncation is not caused solely by:
-  - `documentation/docs/css/pdf.css`
-  - `documentation/hooks/pdf_preprocess.py`
-  - `draw/bokeh-builder.md` on its own
-  - `BokehBuilder` images
-- The `AutoFlare` page image is a confirmed trigger for the WeasyPrint truncation in the long combined document.
-- Removing only that image in a temp diagnostic build allowed `AutoFlare` text and `BokehBuilder` to appear.
-- Converting that image to PNG did not fix the issue, so the problem is not simply WebP format support.
-
-### Recommended export direction
-
-- Build local HTML with MkDocs first.
-- Render the final PDF with a browser engine (preferably Playwright using the Chrome channel).
-- Tune browser print CSS rather than continuing to chase WeasyPrint-specific layout failures.
-
-### Browser-renderer results now verified
-
-- `documentation/scripts/build_pdf.sh` now captures the merged HTML output and hands that HTML to a Playwright + Chrome renderer.
-- The first full browser-rendered build completed successfully on March 5, 2026.
-- Output file: `documentation/NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf`
-- Resulting browser-rendered PDF stats:
-  - 466 pages
-  - A4
-  - 164.6 MB
-- The browser-rendered PDF now includes:
-  - page 1 splash/cover image
-  - `AutoFlare` on page 44
-  - `BokehBuilder` on page 45
-  - final `About / Special Thanks / Contact` page at page 466
-- This confirms the renderer pivot fixed the truncation bug.
-- The cover-image sharpness issue was traced to `documentation/scripts/build_pdf.sh`, which was converting the splash image to a temp PNG at only `640px` width before render.
-- Keeping the temp cover asset at native source resolution allows the browser-rendered PDF to embed the cover image at `1280x720` instead of `640x360`, which materially improves sharpness.
-- The committed PDF cover asset now lives at `documentation/docs/img/pdf/NukeSurvivalToolkit_Splashpage_cover.jpg`.
-- Both `documentation/mkdocs.pdf.yml` and `documentation/scripts/build_pdf.sh` now use that JPEG cover asset for page 1 so the build no longer depends on regenerating the cover from the softer WebP source.
-- Remaining issues are now quality/pagination issues rather than completeness:
-  - page count is still far above the 305-page reference
-  - cover typography and footer placement still differ noticeably from v2.1.0
-  - shared-page behavior and whitespace need more tuning under browser print CSS
+- The repo's strongest proven path for **browsing** the wiki locally is the offline HTML build: `mkdocs build -f mkdocs.offline.yml`.
+- For **PDF**, the user-facing command is **`./export_pdf`** (`buildPDF/export_pdf`). It orchestrates section and tool bundles, merge, stamping, optional TOC links, Ghostscript compression, and caching—on top of the same Playwright/MkDocs/`pypdf`/Poppler primitives used by `make_wiki_pdf` and `make_tool_pages_pdf`.
+- `documentation/mkdocs.pdf.yml` remains useful as the merged-HTML source for PDF slice extraction. **Shipped PDFs use browser/Playwright printing, not WeasyPrint, as the final renderer** (why: see [PDF pipeline history](archive/pdf-pipeline-history.md)).
+- The proven **internal** render/assemble chain for PDF slices and merged books is:
+  - MkDocs merged HTML (per pipeline step)
+  - Playwright/Chrome (or equivalent) print to PDF
+  - `pypdf` page-number stamping where applicable
+  - Poppler **`pdfseparate` / `pdfunite`** (and related tooling) for extraction and assembly
 
 ### Operational notes
 
@@ -138,7 +88,7 @@ The workflow triggers on pushes to `main` or `master` when files under `document
 - Prefer temp directories for PDF diagnostics; do not generate fallback image assets into the repo.
 - Generated PDF test builds should remain local/temporary artifacts and should not be committed.
 - The tracked `documentation/NukeSurvivalToolkit_Documentation_Release_v2.2.0.pdf` file is the original reference PDF, not a generated test iteration.
-- The current combined review target is `full-so-far`, which assembles cover, page 2, Technical Details, Menus, Special Thanks, and Contact into one local review PDF.
+- The combined non-tool review target is **`non-tool-sections`**, which assembles cover, about-installation, Technical Details, Menus, Special Thanks, and Contact into one local review PDF.
 - The current merged full-book target is `full-wiki`, which preserves the approved main-page build as truth and inserts the separately rendered tool-pages PDF between the front main pages and the end matter.
 - `./buildPDF/make_wiki_pdf full-wiki --category <slug>` now supports reduced TOC/layout runs while keeping the front matter and end matter in the build.
 - `make_wiki_pdf` currently depends on:
@@ -161,43 +111,15 @@ The workflow triggers on pushes to `main` or `master` when files under `document
   - all tool pages from `make_tool_pages_pdf`
   - `special-thanks`
   - `contact`
-- The merged `full-wiki` flow stamps page numbers once, after merge, so the final numbering belongs to the combined result rather than the old `full-so-far` sequence.
+- The merged `full-wiki` flow stamps page numbers once, after merge, so the final numbering belongs to the combined result rather than the per-section sequence used by **`non-tool-sections`**.
 - The generated `Tool Index` is built from the MkDocs nav plus the first H1 from each tool markdown page. The script resolves the actual destination pages from the rendered tool-pages PDF using `pdftotext`, then rerenders the TOC until its own page count stabilizes.
-- After the final merged PDF is stamped, `make_wiki_pdf` runs:
-  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/documentation/scripts/add_pdf_toc_links.py`
-  to inject clickable TOC rectangles and PDF bookmark-outline entries.
+- After the final merged PDF is stamped, `make_wiki_pdf` invokes `documentation/scripts/add_pdf_toc_links.py` (via `add_toc_links_and_outline()`) to inject clickable TOC rectangles and PDF bookmark-outline entries.
 - `./export_pdf` now keeps that normal output and, by default, also writes a `__compressed.pdf` sibling via Ghostscript. The current recommended preset is tuned around `128 dpi` color/gray image downsampling with forced JPEG recompression. For mixed/full exports, the compressed sibling is generated from the stamped PDF and then receives its own TOC-link and bookmark injection pass so navigation survives the lossy rewrite.
 - `./export_pdf` now also maintains a local bundle cache under `.cache/pdf-export/` for unstamped front-matter sections and per-category tool PDFs. The public flags are:
   - `--no-cache`
   - `--refresh-cache`
 - Tool-category exports now prune the MkDocs nav before `mkdocs build` and render category bundles in nav order, rather than always building the full tool corpus and trimming it afterward.
-- Verified full-book TOC run on March 12, 2026:
-  - `./buildPDF/make_wiki_pdf full-wiki --artifact-version 20260312`
-  - output: `459` pages
-  - size: `166.8 MB`
-  - wall time: `4 min 16.90 sec`
-  - outline items: `260`
-  - link annotations: `948`
-- A stale nav reference to `filter/bm-lightwrap.md` blocked the first full TOC run. The MkDocs configs now point to `filter/bm-optical-lightwrap.md`, which matches the renamed markdown file.
 - Back matter (`Special Thanks`, `Contact`) must stay out of the tool-group TOC scan; otherwise the TOC resolver will incorrectly search for those titles inside the tool-pages PDF.
-
-### AI Handoff Files (2026-03-12)
-
-- Current export-PDF handoff prompt:
-  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260312_004439_export-pdf_HANDOFF.md`
-- Current export-PDF factual status report:
-  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260312_004439_export-pdf_STATUS_REPORT.md`
-- Previous general handoff prompt:
-  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260306_HANDOFF.md`
-- Previous general factual status report:
-  - `/Users/tonylyons/Dropbox/Public/GitHub/NukeSurvivalToolkit_Wiki/.ai/20260306_STATUS_REPORT.md`
-
-Use the 2026-03-12 export-PDF handoff files first when continuing the current branch-integration and TOC-transplant work. Use the 2026-03-06 files as older background on the earlier markdown-backed PDF architecture shift.
-
-Current takeover priority:
-- markdown-driven content sourcing is now in place for `technical-details`, `menu`, `special-thanks`, and `contact`
-- natural-flow technical-details pagination and universal post-stamped page numbering are now in place for the approved subset workflow
-- the next agent should extend the same approach to later section groups without changing the approved page shells
 
 ### Common Validation Checks
 

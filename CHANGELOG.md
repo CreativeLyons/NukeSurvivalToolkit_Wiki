@@ -2,14 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Changed
-
-- Moved `export_pdf`, `make_wiki_pdf`, and `make_tool_pages_pdf` into `buildPDF/`; added a repo-root `./export_pdf` launcher script so the public command path stays the same.
+## [2.2.0] - 2026-03-29
 
 ### Added
 
@@ -36,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local font assets under `documentation/docs/assets/fonts/` for Lato, JetBrains Mono, and Titillium Web.
 - PDF export source files for browser rendering under `documentation/mkdocs.pdf.yml`, `documentation/scripts/`, `documentation/templates/`, and `documentation/docs/css/`.
 - Public root-level `./export_pdf` entrypoint that defaults to the full wiki PDF while exposing section/category filtering through one command.
-- Root-level `make_wiki_pdf` entrypoint for section-based local PDF builds, with current `cover`, `about-installation`, `technical-details`, `menu`, `contact`, `special-thanks`, `pages-1-2`, `pages-1-5`, and `full-so-far` targets plus versioned review artifacts under `/tmp/nst-wiki-pdf/`.
+- Root-level `make_wiki_pdf` entrypoint for section-based local PDF builds, with current `cover`, `about-installation`, `technical-details`, `menu`, `contact`, `special-thanks`, `pages-1-2`, `pages-1-5`, and `non-tool-sections` targets plus versioned review artifacts under `/tmp/nst-wiki-pdf/`.
 - Dedicated PDF templates for the Technical Details, Contact, and Special Thanks slices under `documentation/templates/`.
 - PDF cover source asset at `documentation/docs/img/pdf/NukeSurvivalToolkit_Splashpage_cover.jpg`.
 - Local Julius Sans One font asset at `documentation/docs/assets/fonts/julius-sans-one-400-normal-latin.ttf` for PDF cover typography.
@@ -67,9 +65,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shifted the active PDF workflow toward section-by-section approval through `make_wiki_pdf` instead of treating the full-book browser build path as the only entrypoint.
 - Split the old combined About end matter into standalone `special-thanks.md` and `contact.md` wiki pages, and removed `About` from the live nav because it no longer carried meaningful standalone content.
 - Switched `make_wiki_pdf` content slices to a markdown-backed contextual build so `technical-details`, `menu`, `special-thanks`, and `contact` now render from the same source files as the wiki while preserving the approved PDF shell.
-- Updated `full-so-far` to build the current approved subset from those markdown-backed slices instead of stitching standalone content templates together.
+- Updated **`non-tool-sections`** to build the current approved subset from those markdown-backed slices instead of stitching standalone content templates together.
 - Replaced per-template HTML footer numbering with one shared post-render PDF-numbering pass so the cover and all interior approved pages use the same visible number placement.
-- Added a merged `full-wiki` PDF path that preserves the approved `full-so-far` main-page render as truth, builds tool pages separately, then combines front main pages, tool pages, and end matter before stamping one consecutive page-number sequence across the merged result.
+- Added a merged `full-wiki` PDF path that preserves the approved non-tool main-page render as truth, builds tool pages separately, then combines front main pages, tool pages, and end matter before stamping one consecutive page-number sequence across the merged result.
 - Returned `make_tool_pages_pdf` to a tool-only build path while keeping category-limited subset renders for review and exposing an internal no-page-number mode for merged-PDF assembly.
 - Updated `full-wiki` to insert a generated `Tool Index` PDF between the main pages and tool pages, resolve its page numbers from the rendered tool-pages PDF, and inject matching bookmark/sidebar navigation into the finished document.
 - Consolidated the public PDF workflow around `./export_pdf` so users no longer need to learn separate entrypoint scripts for full, tool-only, or filtered exports.
@@ -77,6 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tuned the default `./export_pdf` compression profile around `128 dpi` color/gray image downsampling with forced JPEG recompression, and updated `--open` to prefer the compressed sibling when one is generated.
 - Updated mixed/full PDF exports to compress the stamped PDF first and then reapply Tool Index links and bookmark-outline navigation to the compressed sibling so the release artifact keeps working navigation.
 - Updated the docs home page release label to `v2.2.0`.
+- Moved `export_pdf`, `make_wiki_pdf`, and `make_tool_pages_pdf` into `buildPDF/`; added a repo-root `./export_pdf` launcher script so the public command path stays the same.
+- `make_wiki_pdf` **`non-tool-sections`** target: one merged PDF of all non-tool sections (cover through contact).
 
 ### Fixed
 

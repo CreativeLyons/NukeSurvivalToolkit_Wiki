@@ -9,7 +9,7 @@ Current implemented targets:
 - special-thanks
 - pages-1-2
 - pages-1-5
-- full-so-far
+- non-tool-sections (merged PDF: cover through contact, no tool pages)
 - menu
 
 The cover keeps its approved render path. The about-installation page and the
@@ -101,7 +101,7 @@ STAMP_PAGE_NUMBER_RIGHT_GAP_PT = "33.0"
 STAMP_PAGE_NUMBER_BOTTOM_GAP_PT = "14.0"
 ADD_PDF_TOC_LINKS_SCRIPT = DOC_ROOT / "scripts" / "add_pdf_toc_links.py"
 ABOUT_INSTALLATION_TARGET = "about-installation"
-LEGACY_ABOUT_INSTALLATION_ALIAS = "page2"
+NON_TOOL_SECTIONS_TARGET = "non-tool-sections"
 PLANNED_TARGETS = (
     "main-sections",
     "tool-pages",
@@ -115,7 +115,7 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Build approved NST wiki PDF slices as local review artifacts. "
             "Currently implemented: cover, about-installation, technical-details, "
-            "contact, special-thanks, pages-1-2, pages-1-5, full-so-far, full-wiki, menu."
+            "contact, special-thanks, pages-1-2, pages-1-5, non-tool-sections, full-wiki, menu."
         )
     )
     parser.add_argument(
@@ -123,7 +123,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Target to build. Implemented now: cover, about-installation, "
             "technical-details, contact, special-thanks, pages-1-2, "
-            "pages-1-5, full-so-far, full-wiki, menu. Legacy alias still accepted: page2. "
+            "pages-1-5, non-tool-sections, full-wiki, menu. "
             "Planned later: main-sections, tool-pages."
         ),
     )
@@ -859,8 +859,6 @@ def merge_pdf_sequence(
 
 
 def normalize_target(raw_target: str) -> str:
-    if raw_target == LEGACY_ABOUT_INSTALLATION_ALIAS:
-        return ABOUT_INSTALLATION_TARGET
     return raw_target
 
 
@@ -1614,8 +1612,8 @@ def build_pages_1_5(*, version: str, output_path: Path, playwright_python: str, 
     return output_path
 
 
-def build_full_so_far(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
-    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-full-so-far.") as temp_dir_str:
+def build_non_tool_sections(*, version: str, output_path: Path, playwright_python: str, verbose: bool) -> Path:
+    with tempfile.TemporaryDirectory(prefix="nst-make-wiki-non-tool-sections.") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         cover_pdf = temp_dir / "cover.pdf"
         about_installation_pdf = temp_dir / "about-installation.pdf"
@@ -1817,7 +1815,7 @@ def output_path_for(target: str, output_dir: Path, *, artifact_version: int, cat
         "special-thanks": f"nst_wiki_special_thanks_v{artifact_version}.pdf",
         "pages-1-2": f"nst_wiki_v{artifact_version}.pdf",
         "pages-1-5": f"nst_wiki_v{artifact_version}.pdf",
-        "full-so-far": f"nst_wiki_v{artifact_version}.pdf",
+        NON_TOOL_SECTIONS_TARGET: f"nst_wiki_v{artifact_version}.pdf",
         "full-wiki": (
             f"nst_wiki_full_with_tools-{category}_v{artifact_version}.pdf"
             if category else f"nst_wiki_full_with_tools_v{artifact_version}.pdf"
@@ -1841,15 +1839,26 @@ def main() -> int:
         print(f"Target '{target}' is planned but not implemented yet.")
         print(
             "Implemented targets: cover, about-installation, technical-details, contact, special-thanks, "
-            "pages-1-2, pages-1-5, full-so-far, full-wiki, menu"
+            "pages-1-2, pages-1-5, non-tool-sections, full-wiki, menu"
         )
         return 2
 
-    if target not in {"cover", ABOUT_INSTALLATION_TARGET, "technical-details", "contact", "special-thanks", "pages-1-2", "pages-1-5", "full-so-far", "full-wiki", "menu"}:
+    if target not in {
+        "cover",
+        ABOUT_INSTALLATION_TARGET,
+        "technical-details",
+        "contact",
+        "special-thanks",
+        "pages-1-2",
+        "pages-1-5",
+        NON_TOOL_SECTIONS_TARGET,
+        "full-wiki",
+        "menu",
+    }:
         print(f"Unknown target: {target}", file=sys.stderr)
         print(
             "Implemented targets: cover, about-installation, technical-details, contact, special-thanks, "
-            "pages-1-2, pages-1-5, full-so-far, full-wiki, menu",
+            "pages-1-2, pages-1-5, non-tool-sections, full-wiki, menu",
             file=sys.stderr,
         )
         return 2
@@ -1914,7 +1923,7 @@ def main() -> int:
             category=args.category,
         )
     else:
-        build_full_so_far(
+        build_non_tool_sections(
             version=args.version,
             output_path=output_path,
             playwright_python=playwright_python,

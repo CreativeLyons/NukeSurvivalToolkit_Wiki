@@ -47,7 +47,7 @@ When changes under `documentation/**` are pushed to `main` or `master`, `.github
 
 ## Build The Offline HTML Wiki
 
-Use the offline config when you want a local copy that behaves correctly from disk or inside a downloadable zip.
+Use the offline config when you want a local copy that behaves correctly from disk or inside a downloadable Release zip.
 
 Build:
 
@@ -92,35 +92,104 @@ The PDF implementations live under `buildPDF/` (`export_pdf`, `make_wiki_pdf`, `
 
 ## Export The Offline PDF
 
-Use `./export_pdf` from the repository root. The default export mode is `full-wiki`.
-
-Basic export:
+Run `./export_pdf` from the repository root (it calls `buildPDF/export_pdf`). For the exact argparse text, run:
 
 ```bash
+./export_pdf --help
+```
+
+### Presets (positional `mode`)
+
+Optional first argument; default is **`full-wiki`**.
+
+| Mode | What it includes |
+|------|------------------|
+| `full-wiki` | All sections below, Tool Index (`toc`), and all tool pages. |
+| `tools-only` | Tool pages only (no front/back matter). |
+| `non-tools-only` | Cover, about, technical specs, menus, special thanks, contacts — no tool pages or Tool Index. |
+
+### Section names (`--sections`)
+
+Use **`--sections`** one or more times. Each value can be a comma-separated list. Valid **part** names:
+
+`cover`, `about-installation`, `technical-specs`, `menu`, `toc`, `tool-pages`, `special-thanks`, `contacts`
+
+- Omit `--sections` to use the preset’s default list.
+- Use **`none`** in a `--sections` value to ignore the preset and build only what you list next (for example: `--sections none --sections cover,menu,tool-pages`).
+- **`all`** or **`*`** expands to every part above.
+
+The exporter also accepts common aliases (for example `technical` → `technical-specs`, `tools` → `tool-pages`, `contact` → `contacts`). Unknown names are rejected with an error that lists valid parts.
+
+**Rules:**
+
+- If you include **`toc`** (Tool Index), you must also include **`tool-pages`**.
+- **`--tool-category`** only applies when **`tool-pages`** is part of the export.
+
+### Tool categories (`--tool-category`)
+
+Limit tool pages to one or more wiki category folders (repeat the flag or use comma-separated values). Examples: `draw`, `filter`, `transform`, `3d`, `cg`, `curves`, `utilities`, `color`. Names match the documentation directory slugs under `documentation/docs/`.
+
+### Other flags
+
+| Flag | Purpose |
+|------|---------|
+| `--version STRING` | Release label on the cover and in the output filename. Default matches `DEFAULT_VERSION` in `buildPDF/make_wiki_pdf` (currently `v2.2.0`). |
+| `--output-dir PATH` | Write PDFs here instead of the repo’s `output/pdf/`. Relative paths are resolved from the current working directory. |
+| `--no-compress` | Skip the Ghostscript pass; only the main PDF is written (no `__compressed.pdf` sibling). Use if `gs` is not installed — the tool will otherwise require Ghostscript for compression. |
+| `--open` | After a successful build, open the compressed PDF if one was produced, otherwise the main PDF. |
+| `--verbose` | Print output from the underlying renderer commands. |
+| `--no-cache` | Disable the local PDF bundle cache under `.cache/pdf-export/` for this run. |
+| `--refresh-cache` | Rebuild cached section/tool bundles before assembling the export. |
+
+### Output location and artifacts
+
+By default, PDFs go to **`output/pdf/`** with a timestamped, release-style basename. Custom exports add suffix segments to the filename so the preset and scope are obvious.
+
+The export always produces the main PDF. Unless **`--no-compress`** is set, it also writes a **`__compressed.pdf`** sibling (smaller file; requires Ghostscript on `PATH`). **Do not commit** these outputs — they are local build artifacts.
+
+### Examples
+
+```bash
+# Full wiki (default preset)
 ./export_pdf
 ```
 
-Export only tool pages from one category:
-
 ```bash
+# Tool pages for one category only
 ./export_pdf tools-only --tool-category draw
 ```
 
-Export without the default compressed sibling:
+```bash
+# Multiple tool categories
+./export_pdf tools-only --tool-category draw,filter
+```
+
+```bash
+# Non-tool sections only (preset)
+./export_pdf non-tools-only
+```
+
+```bash
+# Custom section list (clear preset, then choose parts)
+./export_pdf --sections none --sections cover,about-installation,technical-specs,menu,special-thanks,contacts
+```
+
+```bash
+# Tool pages + Tool Index for one category
+./export_pdf --sections tool-pages,toc --tool-category color
+```
 
 ```bash
 ./export_pdf --no-compress
 ```
 
-Write output somewhere else:
-
 ```bash
 ./export_pdf --output-dir /tmp/nst-pdf-checks
 ```
 
-By default, finished PDFs go to `output/pdf/` and use release-style filenames with a timestamp.
-
-The export keeps the normal PDF and, unless disabled, also writes a `__compressed.pdf` sibling. Generated PDFs are local build artifacts and should not be committed.
+```bash
+./export_pdf --version v2.3.0 --open --verbose
+```
 
 ## Offline HTML vs Offline PDF
 

@@ -113,7 +113,6 @@ SECTION_ALIASES = {
     "about": "about-installation",
     "installation": "about-installation",
     "intro": "about-installation",
-    "page2": "about-installation",
     "technical": "technical-specs",
     "technical-details": "technical-specs",
     "technical-specs": "technical-specs",
