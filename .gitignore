@@ -30,6 +30,7 @@ CLAUDE.md
 documentation/scripts/content_analysis_report.md
 
 # Editor/IDE
+.cursor/
 .vscode/
 .idea/
 
